@@ -7,9 +7,9 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
     body {
-      background: #090b10;
-      color: #f3efe6;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0b1120;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       overflow: hidden;
       height: 100vh;
       width: 100vw;
@@ -33,47 +33,42 @@
       flex-direction: column;
       justify-content: space-between;
       padding: 24px;
+      z-index: 10;
     }
     .hud-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(14, 18, 28, 0.75);
-      backdrop-filter: blur(8px);
-      padding: 12px 24px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 12px 28px;
       border-radius: 16px;
-      border: 1px solid rgba(255, 180, 50, 0.25);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      border: 1px solid rgba(251, 191, 36, 0.35);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
     .title-box h1 {
       font-size: 20px;
-      color: #ffcc66;
-      text-shadow: 0 0 10px rgba(255, 204, 102, 0.6);
+      color: #fbbf24;
+      text-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
       display: flex;
       align-items: center;
       gap: 8px;
     }
     .title-box span {
       font-size: 13px;
-      color: #a0aec0;
+      color: #94a3b8;
       font-weight: normal;
     }
     .stat-badge {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-size: 16px;
       font-weight: bold;
     }
-    .time-badge {
-      color: #63b3ed;
-    }
-    .score-badge {
-      color: #f6e05e;
-    }
-    .lantern-badge {
-      color: #ed8936;
-    }
+    .time-badge { color: #38bdf8; }
+    .score-badge { color: #fde047; }
+    .lantern-badge { color: #fb923c; }
 
     .hud-bottom {
       display: flex;
@@ -81,14 +76,15 @@
       align-items: flex-end;
     }
     .player-stats {
-      background: rgba(14, 18, 28, 0.8);
-      backdrop-filter: blur(8px);
-      padding: 16px 20px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 16px 22px;
       border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
     .flames-row {
       display: flex;
@@ -97,11 +93,11 @@
     }
     .flame-icon {
       font-size: 24px;
-      filter: drop-shadow(0 0 8px #ff7b00);
+      filter: drop-shadow(0 0 8px #f97316);
       transition: opacity 0.3s, transform 0.3s;
     }
     .flame-icon.lost {
-      opacity: 0.2;
+      opacity: 0.15;
       filter: grayscale(1);
       transform: scale(0.8);
     }
@@ -113,42 +109,43 @@
     }
     .carried-dots {
       display: flex;
-      gap: 6px;
+      gap: 8px;
     }
     .mote-dot {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.15);
-      border: 1px solid #ffcc00;
-      transition: all 0.2s;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid #fbbf24;
+      transition: all 0.25s;
     }
     .mote-dot.filled {
-      background: #ffdd44;
-      box-shadow: 0 0 10px #ffdd44;
-      transform: scale(1.1);
+      background: #facc15;
+      box-shadow: 0 0 12px #facc15;
+      transform: scale(1.15);
     }
 
     .controls-card {
-      background: rgba(14, 18, 28, 0.75);
-      backdrop-filter: blur(8px);
-      padding: 14px 20px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      padding: 16px 22px;
       border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       font-size: 13px;
-      color: #cbd5e0;
-      line-height: 1.6;
+      color: #cbd5e1;
+      line-height: 1.7;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
     .key {
       display: inline-block;
-      background: #2d3748;
-      color: #f7fafc;
-      padding: 2px 7px;
+      background: #334155;
+      color: #f8fafc;
+      padding: 2px 8px;
       border-radius: 6px;
       font-size: 11px;
       font-weight: bold;
-      border-bottom: 2px solid #1a202c;
-      margin: 0 2px;
+      border-bottom: 2px solid #1e293b;
+      margin: 0 3px;
     }
 
     /* Modal End Screen */
@@ -158,8 +155,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(4, 7, 13, 0.85);
-      backdrop-filter: blur(12px);
+      background: rgba(11, 17, 32, 0.88);
+      backdrop-filter: blur(14px);
       display: none;
       justify-content: center;
       align-items: center;
@@ -167,15 +164,15 @@
       pointer-events: auto;
     }
     .modal-content {
-      background: #141b2d;
+      background: #1e293b;
       padding: 40px;
       border-radius: 24px;
-      border: 2px solid #ffaa33;
+      border: 2px solid #f59e0b;
       text-align: center;
-      max-width: 440px;
+      max-width: 450px;
       width: 90%;
-      box-shadow: 0 10px 40px rgba(255, 170, 51, 0.3);
-      animation: popIn 0.4s ease-out;
+      box-shadow: 0 12px 48px rgba(245, 158, 11, 0.35);
+      animation: popIn 0.35s ease-out;
     }
     @keyframes popIn {
       from { transform: scale(0.85); opacity: 0; }
@@ -187,39 +184,32 @@
     }
     .modal-subtitle {
       font-size: 15px;
-      color: #a0aec0;
+      color: #94a3b8;
       margin-bottom: 24px;
       line-height: 1.5;
     }
     .modal-score {
       font-size: 22px;
-      color: #f6e05e;
+      color: #fde047;
       margin-bottom: 28px;
     }
     .btn-restart {
-      background: linear-gradient(135deg, #f6ad55, #dd6b20);
-      color: #1a202c;
+      background: linear-gradient(135deg, #fbbf24, #ea580c);
+      color: #0f172a;
       font-weight: bold;
       font-size: 16px;
       border: none;
-      padding: 14px 32px;
+      padding: 14px 34px;
       border-radius: 12px;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(221, 107, 32, 0.5);
+      box-shadow: 0 4px 18px rgba(234, 88, 12, 0.5);
       transition: transform 0.2s, background 0.2s;
     }
     .btn-restart:hover {
       transform: translateY(-2px);
-      background: linear-gradient(135deg, #fbd38d, #ed8936);
+      background: linear-gradient(135deg, #fde047, #f97316);
     }
   </style>
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "/three.module.js"
-      }
-    }
-  </script>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
@@ -280,6 +270,6 @@
     </div>
   </div>
 
-  <script type="module" src="/src/ui/game.js"></script>
+  <script type="module" src="./game.js"></script>
 </body>
 </html>
