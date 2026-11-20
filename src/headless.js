@@ -44,8 +44,8 @@ for (let i = 0; i < args.length; i++) {
   }
 }
 
-if (ticks === null || !outPath) {
-  printUsageAndExit(1, 'Missing required argument --ticks or --out');
+if (ticks === null) {
+  ticks = night === 1 ? 18000 : night === 2 ? 19800 : 21600;
 }
 
 // Load tuning from game.contract.json if present
@@ -103,23 +103,30 @@ if (inputsPath) {
 // Initialize engine
 const engine = new GameEngine({
   seed,
+  night,
   tuning,
   scenario
 });
 
-// Ensure output directory exists
-const outDir = path.dirname(path.resolve(outPath));
-if (!fs.existsSync(outDir)) {
-  fs.mkdirSync(outDir, { recursive: true });
+const startTime = performance.now();
+let outStream = null;
+if (outPath) {
+  const outDir = path.dirname(path.resolve(outPath));
+  if (!fs.existsSync(outDir)) {
+    fs.mkdirSync(outDir, { recursive: true });
+  }
+  outStream = fs.createWriteStream(outPath, { encoding: 'utf8' });
 }
-const outStream = fs.createWriteStream(outPath, { encoding: 'utf8' });
 
 function writeLine(obj) {
-  outStream.write(JSON.stringify(obj) + '\n');
+  if (outStream) {
+    outStream.write(JSON.stringify(obj) + '\n');
+  }
 }
 
 // Snapshot at tick 0 (initial state after scenario setup, before applying input)
 writeLine(engine.getSnapshot());
+writeLine({ type: 'event', tick: 0, name: 'night_start', data: { night } });
 
 // Default active input
 let activeInput = {
@@ -127,13 +134,15 @@ let activeInput = {
   cam_yaw_deg: 0,
   jump: false,
   interact: false,
-  pulse: false
+  pulse: false,
+  dash: false,
+  pause: false
 };
 
 // Simulation loop
 for (let step = 0; step < ticks; step++) {
   // If game has already won or lost, stop
-  if (engine.state !== 'playing') {
+  if (engine.state === 'won' || engine.state === 'lost') {
     break;
   }
 
@@ -145,7 +154,9 @@ for (let step = 0; step < ticks; step++) {
       cam_yaw_deg: frame.cam_yaw_deg !== undefined ? frame.cam_yaw_deg : activeInput.cam_yaw_deg,
       jump: frame.jump !== undefined ? frame.jump : activeInput.jump,
       interact: frame.interact !== undefined ? frame.interact : activeInput.interact,
-      pulse: frame.pulse !== undefined ? frame.pulse : activeInput.pulse
+      pulse: frame.pulse !== undefined ? frame.pulse : activeInput.pulse,
+      dash: frame.dash !== undefined ? frame.dash : activeInput.dash,
+      pause: frame.pause !== undefined ? frame.pause : activeInput.pause
     };
   }
 
@@ -170,6 +181,14 @@ for (let step = 0; step < ticks; step++) {
 // Final end record
 writeLine(engine.getEndRecord());
 
-outStream.end(() => {
+const durationSec = ((performance.now() - startTime) / 1000).toFixed(3);
+
+if (outStream) {
+  outStream.end(() => {
+    process.exit(0);
+  });
+} else {
+  console.log(`Simulation completed: ${ticks} ticks (Night ${night}) in ${durationSec}s (~${Math.round(ticks / durationSec)} ticks/s).`);
+  console.log(`Final state: ${engine.state}, Score: ${engine.score}`);
   process.exit(0);
-});
+}

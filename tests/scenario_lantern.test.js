@@ -8,11 +8,11 @@ export function testLanternDepositAndWin() {
     random_motes: false,
     random_shades: false,
     lanterns: [
-      { id: 'L1', pos: [0, 0, 1.5], deposited: 0, lit: false },
-      { id: 'L2', pos: [10, 0, 10], deposited: 3, lit: true },
-      { id: 'L3', pos: [-10, 0, 10], deposited: 3, lit: true },
-      { id: 'L4', pos: [10, 0, -10], deposited: 3, lit: true },
-      { id: 'L5', pos: [-10, 0, -10], deposited: 3, lit: true }
+      { id: 'L1', pos: [0, 0, 1.5], deposited: 7, lit: false },
+      { id: 'L2', pos: [10, 0, 10], deposited: 10, lit: true },
+      { id: 'L3', pos: [-10, 0, 10], deposited: 10, lit: true },
+      { id: 'L4', pos: [10, 0, -10], deposited: 10, lit: true },
+      { id: 'L5', pos: [-10, 0, -10], deposited: 10, lit: true }
     ]
   };
 
