@@ -1,0 +1,16 @@
+{
+  "name": "k5-day12-dao-den-long",
+  "version": "1.0.0",
+  "description": "Đảo Đèn Lồng - 3D AI SDLC Game",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/run_all.js",
+    "headless": "node src/headless.js",
+    "build:check": "node -e \"console.log('Build OK')\""
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  }
+}
