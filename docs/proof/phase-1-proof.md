@@ -13,6 +13,7 @@ Tương ứng commit gắn tag: `phase-1`
 | REQ-05 | Va chạm Bóng Mực làm mất máu và thua cuộc | Scenario test va chạm trực diện | `tests/scenario_shade.test.js` | ĐẠT |
 | REQ-06 | Tính tất định (Determinism) | So sánh 2 lần chạy 300 tick cùng seed | `tests/determinism.test.js` | ĐẠT |
 | REQ-07 | Định dạng Test Contract v1.0 | Chạy headless xuất file JSONL | `src/headless.js` | ĐẠT |
+| REQ-08 | Kiểm thử tích hợp E2E Headless CLI | Chạy headless CLI với scenario & inputs thật | `tests/e2e_headless.test.js` | ĐẠT |
 
 ## 2. Kết quả Chạy Test Suite Tự Động
 ```text
@@ -30,9 +31,11 @@ Testing pulse stun and pushback...
 ✓ Pulse stun passed: stunned S1, pushed to pos: [5,0,0], carried left: 1
 Testing shade hit and loss condition...
 ✓ Shade hit and loss passed: hit by shade, flames reduced to 0 -> lost (no_flames)
+Testing E2E headless CLI execution with scenario and inputs...
+✓ E2E Headless CLI test passed: valid scenario + inputs produced correct events and end record.
 
 ====================================
-  ALL 5 TESTS PASSED SUCCESSFULLY!  
+  ALL 6 TESTS PASSED SUCCESSFULLY!  
 ====================================
 ```
 

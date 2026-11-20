@@ -3,6 +3,7 @@ import { testPickup } from './scenario_pickup.test.js';
 import { testLanternDepositAndWin } from './scenario_lantern.test.js';
 import { testPulseStun } from './scenario_pulse.test.js';
 import { testShadeHitAndLoss } from './scenario_shade.test.js';
+import { testE2EHeadless } from './e2e_headless.test.js';
 
 console.log('====================================');
 console.log('  RUNNING ĐẢO ĐÈN LỒNG TEST SUITE   ');
@@ -14,8 +15,9 @@ try {
   testLanternDepositAndWin();
   testPulseStun();
   testShadeHitAndLoss();
+  testE2EHeadless();
   console.log('\n====================================');
-  console.log('  ALL 5 TESTS PASSED SUCCESSFULLY!  ');
+  console.log('  ALL 6 TESTS PASSED SUCCESSFULLY!  ');
   console.log('====================================');
   process.exit(0);
 } catch (err) {

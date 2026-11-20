@@ -56,7 +56,8 @@ export class GameEngine {
     this.sim_tick = 0;
     this.state = "playing"; // "playing", "won", "lost"
     this.score = 0;
-    this.time_left_s = this.tuning.night1_duration_s;
+    this.initial_time_left_s = this.tuning.night1_duration_s;
+    this.time_left_s = this.initial_time_left_s;
 
     this.player = {
       pos: [0, 0, 0],
@@ -123,6 +124,7 @@ export class GameEngine {
 
   applyScenario(scenario) {
     if (scenario.time_left_s !== undefined) {
+      this.initial_time_left_s = scenario.time_left_s;
       this.time_left_s = scenario.time_left_s;
     }
 
@@ -347,9 +349,19 @@ export class GameEngine {
             // Safe zone check around lit lanterns
             let inSafeZone = false;
             for (const lantern of litLanterns) {
-              const dL = Math.hypot(nextX - lantern.pos[0], nextZ - lantern.pos[2]);
-              if (dL < this.tuning.safe_radius) {
+              const currentDist = Math.hypot(shade.pos[0] - lantern.pos[0], shade.pos[2] - lantern.pos[2]);
+              const nextDist = Math.hypot(nextX - lantern.pos[0], nextZ - lantern.pos[2]);
+
+              if (currentDist >= this.tuning.safe_radius && nextDist < this.tuning.safe_radius) {
                 inSafeZone = true;
+                break;
+              }
+              if (currentDist < this.tuning.safe_radius) {
+                const repelX = shade.pos[0] - lantern.pos[0] || 1;
+                const repelZ = shade.pos[2] - lantern.pos[2] || 0;
+                const rLen = Math.hypot(repelX, repelZ) || 1;
+                nextX = shade.pos[0] + (repelX / rLen) * this.tuning.shade_speed * dt;
+                nextZ = shade.pos[2] + (repelZ / rLen) * this.tuning.shade_speed * dt;
                 break;
               }
             }
@@ -402,7 +414,7 @@ export class GameEngine {
       this.player.invuln_timer -= dt;
     }
 
-    this.time_left_s -= dt;
+    this.time_left_s = Math.max(0, this.initial_time_left_s - this.sim_tick / 60);
     if (this.time_left_s <= 0 && this.state === "playing") {
       this.time_left_s = 0;
       this.state = "lost";
