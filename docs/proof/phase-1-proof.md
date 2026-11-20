@@ -2,7 +2,13 @@
 
 Tương ứng commit gắn tag: `phase-1`
 
-## 1. Ma trận Truy vết Yêu cầu
+## 1. Tệp Bằng Chứng Gốc Đi Kèm
+- **Log chạy test suite tự động:** [phase-1-test-output.txt](phase-1-test-output.txt)
+- **Output mẫu chế độ Headless Test Contract v1.0:** [phase-1-sample-headless.jsonl](phase-1-sample-headless.jsonl)
+
+---
+
+## 2. Ma trận Truy vết Yêu cầu
 
 | Mã | Yêu cầu | Cách kiểm tra | Kịch bản kiểm chứng | Kết quả |
 |---|---|---|---|:---:|
