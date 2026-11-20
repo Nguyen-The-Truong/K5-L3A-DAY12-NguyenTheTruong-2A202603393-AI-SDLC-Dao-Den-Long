@@ -3,7 +3,7 @@
 > **Tác giả:** Nguyễn Thế Trường — MSSV: 2A202603393  
 > **Lớp:** K5-L3A · Khóa 5  
 > **Dự án:** Game 3D Đảo Đèn Lồng phát triển theo quy trình AI SDLC 4 Pha  
-> **Tag nghiệm thu hiện tại:** `phase-2` (Contract v1.1)
+> **Tag nghiệm thu hiện tại:** `phase-3` (Contract v1.2)
 
 ---
 
@@ -25,7 +25,7 @@ Mở trình duyệt truy cập: `http://localhost:3000` (hoặc mở trực ti�
 
 ---
 
-## 2. Chế Độ Headless (Test Contract v1.1)
+## 2. Chế Độ Headless (Test Contract v1.2)
 
 Lệnh kiểm thử tự động không giao diện:
 ```bash
@@ -37,62 +37,82 @@ Các tham số hỗ trợ:
 - `--ticks <int>`: Số tick mô phỏng (mặc định: 600).
 - `--scenario <file.json>`: Nạp kịch bản vị trí thực thể tùy biến.
 - `--inputs <file.json>`: Nạp danh sách thao tác phím bấm theo từng tick.
-- `--out <file.jsonl>`: Xuất kết quả chuỗi JSON Lines theo Contract v1.1.
+- `--out <file.jsonl>`: Xuất kết quả chuỗi JSON Lines theo Contract v1.2 (tùy chọn; nếu không truyền sẽ chạy benchmark và in thống kê).
 - `--snapshot-every <int>`: Chu kỳ ghi snapshot (mặc định: 10).
 
 ---
 
-## 3. Điều Khiển & Cơ Chế Chơi (Phase 2)
+## 3. Điều Khiển & Cơ Chế Chơi (Phase 3)
 
 - **W / A / S / D**: Di chuyển nhân vật Mây (tốc độ chuẩn 6.0 m/s; 7.2 m/s khi có Bùa Gió).
 - **Space**: Nhảy (vận tốc ban đầu 7.0 m/s, trọng lực -20 m/s²).
 - **Shift**: Lướt nhanh (Dash 14.0 m/s trong 0.2s, hồi chiêu 1.5s; không hồi chiêu khi có Bùa Gió).
-- **E**: Thắp đèn (nạp đom đóm vào Đèn Lồng Lớn khi lại gần trong bán kính 2.0 m).
-- **Q**: Tỏa Sáng (Pulse tốn 3 đom đóm, bán kính 5.0 m; làm choáng 120 ticks, đẩy lùi Bóng Mực và khiến Gió Lạc rơi đom đóm đã trộm).
+- **E**: Tương tác với Đèn Lồng Lớn trong bán kính 2.0 m:
+  - Thắp đèn lần đầu (tốn 10 đom đóm, `relight: false`).
+  - Thắp lại đèn đã tắt (tốn 5 đom đóm, `relight: true`).
+  - Châm thêm dầu cho đèn đang sáng khi `fuel < 100`.
+- **Q**: Tỏa Sáng (Pulse tốn 3 đom đóm, bán kính 5.0 m; làm choáng 120 ticks, đẩy lùi Bóng Mực, nhận +15đ nếu trúng Bóng đang hút dầu, khiến Gió Lạc rơi đom đóm).
 - **Esc**: Tạm dừng (Pause / Resume).
 
 ---
 
-## 4. Hệ Thống 3 Đêm & Cơ Chế Màn Chơi (Phase 2)
+## 4. Hệ Thống Đèn Cạn Dầu & Luật Thắng Mới (Phase 3)
 
-1. **Đêm 1 — Đảo Bến:** Đảo tròn cổ tích bán kính 40m, 5 Đèn Lồng Lớn, 20 đom đóm khởi đầu, Bóng Mực xuất hiện từ tick 300.
-2. **Đêm 2 — Đảo Cau:** Hai hòn đảo song sinh bán kính 28m kết nối qua cầu trung tâm, 2 Bục Nhảy phản lực phóng giữa 2 đảo (vận tốc 24 m/s ngang, 14 m/s cao), 6 Đèn Lồng Lớn, xuất hiện sinh vật trộm đom đóm **Gió Lạc** và **Bùa Gió** siêu tốc.
-3. **Đêm 3 — Đảo Chuông:** Kiến trúc 3 tầng đồng tâm cao dần dẫn lên Tháp Chuông ở đỉnh (độ cao 12m), 7 Đèn Lồng Lớn, hiệu ứng gió thổi định kỳ từ tâm, Bóng Mực di chuyển nhanh hơn (4.5 m/s).
+1. **Nhiên liệu Đèn Lồng (Fuel Decay):**
+   - Đèn có dung lượng tối đa 100 fuel, khi sáng tự tiêu hao 1.0 unit/s ($1/60$ mỗi tick).
+   - Khi `fuel <= 0`: Đèn tắt, phát `lantern_out`, nhớ cờ `ever_lit = true`. Thắp lại chỉ tốn 5 đom đóm.
+   - Thanh nhiên liệu 3D hiển thị ngay trên đầu mỗi ngọn đèn đang sáng. Khi `fuel < 30`, đèn và thanh dầu nhấp nháy tần số 1 Hz.
+2. **Bóng Mực Hút Dầu (Shade Drain):**
+   - Đèn có `fuel < 30` bị mất vùng an toàn bán kính 6m.
+   - Bóng Mực ưu tiên tìm đèn sáng yếu dầu và chuyển sang trạng thái `drain`, đứng yên hút 5 fuel/s ($5/60$ tick).
+   - Tỏa Sáng trúng Bóng đang drain thưởng $+15$ điểm.
+3. **Mục Tiêu Mới — Giữ Đảo Sáng Tới Bình Minh:**
+   - Thời gian Đêm 1: 240s, Đêm 2: 270s, Đêm 3: 300s.
+   - Không còn thắng sớm khi thắp hết đèn.
+   - Thắng khi sống sót tới hết giờ và số đèn đang sáng $\ge \lceil 0.6 \times \text{tổng đèn} \rceil$ (Đêm 1: 3/5, Đêm 2: 4/6, Đêm 3: 5/7) với lý do `dawn_survived`.
+4. **Sức Chứa Đom Đóm Tăng Dần:**
+   - $\text{capacity} = \min(20, 10 + 2 \times \text{successful\_lights})$.
+5. **Chế Độ Mù Màu (Colorblind Accessibility Mode):**
+   - Nút bật/tắt trên thanh HUD, lưu trạng thái vào `localStorage`.
+   - Viền và mắt Bóng Mực đổi thành `#00B3FF`.
+   - Cảnh báo thời gian hiển thị biểu tượng `⚠` màu `#FFFFFF`.
+   - Đèn tắt bị xẹp 20% chiều cao (`scale.y = 0.8`).
 
 ---
 
-## 5. Quy Chuẩn Tính Điểm
-- Nạp đom đóm vào đèn: `+10 điểm / đom đóm`.
-- Thắp sáng hoàn tất 1 Đèn Lồng Lớn: `+100 điểm`.
-- Tỏa Sáng trúng Bóng Mực: `+5 điểm / con`.
-- Thưởng chiến thắng: `+ floor(thời gian còn lại) × 2` và `+ 50 × Ngọn Lửa còn lại`.
+## 5. Quy Chuẩn Tính Điểm (Contract v1.2)
+- Nạp đom đóm (thắp hoặc châm dầu): `+5 điểm / con`.
+- Thắp sáng lần đầu 1 Đèn Lồng Lớn: `+100 điểm`.
+- Thắp lại đèn đã tắt: `+40 điểm`.
+- Tỏa Sáng trúng Bóng Mực: `+5 điểm` (hoặc `+15 điểm` nếu trúng bóng đang drain).
+- Bình minh chiến thắng: mỗi đèn đang sáng `+ 50 + floor(fuel)`, mỗi Ngọn Lửa `+ 50 điểm`. Bỏ thưởng thời gian thừa.
 
 ---
 
 ## 6. Sáng Tạo Của Tôi
-1. **Thiết kế nhân vật Mây đội nón lá:** Tạo hình nhân vật 3D đội chiếc nón lá đặc trưng Việt Nam, có treo chiếc đèn lồng nhỏ phát sáng ấm áp trên vai.
-2. **Hệ thống âm thanh thủ tục (Procedural Web Audio API Synth):** Tự động tổng hợp thời gian thực toàn bộ hiệu ứng âm thanh (tiếng nhảy, lướt gió vút nhanh, nhặt đom đóm ngân vang, nạp đèn, tiếng va chạm quỷ) mà không phụ thuộc bất kỳ tệp âm thanh bên ngoài nào.
-3. **Độc lập tuyệt đối giữa Simulation & Render:** Core engine chạy độc lập 60 tick/s, đảm bảo chế độ Headless đạt chuẩn Contract 100% không chứa bất kỳ phụ thuộc nào của giao diện.
-4. **Bản dựng siêu tốc với esbuild:** Toàn bộ engine và Three.js được đóng gói trong một file IIFE độc lập, người dùng có thể nhấp đúp mở trực tiếp file `index.html` chạy ngay mà không lo lỗi bảo mật CORS.
+1. **Thiết kế nhân vật Mây đội nón lá:** Tạo hình nhân vật 3D đội nón lá truyền thống, đeo đèn lồng phát sáng ấm áp.
+2. **Hệ thống âm thanh thủ tục (Procedural Web Audio API Synth):** Tự động tổng hợp thời gian thực toàn bộ hiệu ứng âm thanh (nhảy, lướt, đom đóm, châm dầu, tắt đèn, chiến thắng bình minh).
+3. **Độc lập tuyệt đối giữa Simulation & Render:** Core engine chạy độc lập 60 tick/s, chế độ Headless đạt chuẩn Contract 100%.
+4. **Bản dựng siêu tốc với esbuild:** Toàn bộ engine và Three.js được đóng gói vào một file IIFE duy nhất, mở trực tiếp `index.html` chạy ngay mà không lo lỗi CORS.
 
 ---
 
 ## 7. Cấu Trúc Thư Mục Dự Án
 ```text
-├── game.contract.json      # Đặc tả Test Contract v1.1 & thông số tuning chuẩn hóa
+├── game.contract.json      # Đặc tả Test Contract v1.2 & thông số tuning chuẩn hóa
 ├── AGENTS.md               # Quy chuẩn harness cho AI Agent
 ├── server.js               # Web server phục vụ thử nghiệm giao diện 3D
 ├── src/
 │   ├── core/
-│   │   └── engine.js       # Core simulation tất định 60 tick/s (chuẩn Contract v1.1)
+│   │   └── engine.js       # Core simulation tất định 60 tick/s (chuẩn Contract v1.2)
 │   ├── headless.js         # CLI runner headless xuất JSONL theo đặc tả
 │   └── ui/
-│       ├── index.html      # Giao diện HUD 3 Đêm, bảng điều khiển, modal
-│       ├── game.js         # Three.js 3D renderer, camera, Web Audio sound synth
+│       ├── index.html      # Giao diện HUD 3 Đêm, chế độ mù màu, modal
+│       ├── game.js         # Three.js 3D renderer, camera, thanh dầu 3D, Web Audio synth
 │       └── bundle.js       # Bản build độc lập đóng gói qua esbuild
-├── tests/                  # Bộ 12 test tự động (vật lý, nhảy, lướt, drifter, charm, pause...)
+├── tests/                  # Bộ 14 test tự động (hao hụt dầu, hút dầu, relight, dawn_survived...)
 │   └── run_all.js          # Test runner tự động
 └── docs/
-    ├── notes/              # Nhật ký phát triển AI & Spec từng phase
+    ├── notes/              # ADR thiết kế nhiên liệu & luật thắng, nhật ký AI & changelog
     └── proof/              # Ma trận truy vết yêu cầu, log test & sample headless output
 ```

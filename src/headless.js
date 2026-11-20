@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Headless runner for Test Contract v1.0
+// Headless runner for Test Contract v1.2
 import fs from 'node:fs';
 import path from 'node:path';
 import { GameEngine, DEFAULT_TUNING } from './core/engine.js';
@@ -45,7 +45,7 @@ for (let i = 0; i < args.length; i++) {
 }
 
 if (ticks === null) {
-  ticks = night === 1 ? 18000 : night === 2 ? 19800 : 21600;
+  ticks = night === 1 ? 14400 : night === 2 ? 16200 : 18000;
 }
 
 // Load tuning from game.contract.json if present

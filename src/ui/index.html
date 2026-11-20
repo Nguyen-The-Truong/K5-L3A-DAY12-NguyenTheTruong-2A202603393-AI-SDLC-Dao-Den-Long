@@ -96,6 +96,16 @@
       color: #FF5A5F;
       animation: blink 1s infinite alternate;
     }
+    .colorblind-mode .time-badge.warning {
+      color: #FFFFFF !important;
+    }
+    .warning-icon {
+      display: none;
+      font-weight: bold;
+    }
+    .colorblind-mode .warning-icon {
+      display: inline;
+    }
     @keyframes blink {
       from { opacity: 1; transform: scale(1); }
       to { opacity: 0.6; transform: scale(1.05); }
@@ -329,10 +339,11 @@
           <button class="night-btn active" id="btn-night-1">Đêm 1: Đảo Bến</button>
           <button class="night-btn" id="btn-night-2">Đêm 2: Đảo Cau</button>
           <button class="night-btn" id="btn-night-3">Đêm 3: Đảo Chuông</button>
+          <button class="night-btn" id="btn-colorblind" style="border-color: #38bdf8;">👁 Bảng màu: Chuẩn</button>
         </div>
       </div>
       <div class="stat-badge time-badge" id="hud-time-badge">
-        ⏳ <span id="hud-time">05:00</span>
+        ⏳ <span class="warning-icon">⚠ </span><span id="hud-time">04:00</span>
       </div>
       <div class="stat-badge lantern-badge">
         🏮 <span id="hud-lanterns">0 / 5 Đèn</span>

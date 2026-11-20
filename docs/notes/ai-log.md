@@ -36,6 +36,12 @@
 5. **Đảo hướng di chuyển & lướt Trái/Phải (Phím A và D):**
    - *Hiện tượng:* Do camera góc nhìn thứ 3 đặt phía sau nhân vật ở tọa độ $-Z$ nhìn theo hướng $+Z$, trong hệ tọa độ Three.js, hướng bên phải màn hình tương ứng với vector thế giới $-X$, còn bên trái tương ứng với $+X$. Khi người chơi nhấn D thì nhân vật lại lướt sang trái và ngược lại.
    - *Khắc phục:* Đảo dấu trục X trong bộ đọc input bàn phím của UI (`A -> mx = +1`, `D -> mx = -1`) và đồng bộ lại góc quay nhân vật `targetAngle`, giúp nhân vật di chuyển và lướt đúng 100% theo trực quan màn hình người chơi.
+6. **Sai số số thực tích lũy khi tính hao hụt nhiên liệu đèn (Floating-Point Drift):**
+   - *Hiện tượng:* Trừ `fuel -= 1.0/60` mỗi tick dẫn tới sai số dấu phẩy động sau hàng nghìn ticks, làm lệch giá trị so sánh chính xác (`fuel <= 0`, `fuel == 100`).
+   - *Khắc phục:* Quản lý nhiên liệu nội bộ bằng đơn vị nguyên `fuel_units` ($6000\text{ units} = 100.0\text{ fuel}$, mỗi tick trừ chính xác 1 unit tự nhiên hoặc 5 units khi bị drain), đảm bảo tính tiền định tuyệt đối 100%.
+7. **Lỗi sườn xung kích hoạt tương tác (Rising Edge Detection):**
+   - *Hiện tượng:* Khi test thắp lại đèn, cờ `interact: true` bị giữ nguyên liên tục qua nhiều bước mà không nhả ra (`false`), khiến engine không phát hiện sườn xung bấm phím mới.
+   - *Khắc phục:* Đưa bước đệm `interact: false` trước khi kích hoạt thao tác nạp tiếp theo trong kịch bản test.
 
 ---
 
@@ -45,3 +51,4 @@
 |---|:---:|:---:|:---:|:---:|
 | **Phase 1** (Đảo Bến) | ~25,000 | ~6,000 | 6 / 6 tests | ĐÃ HOÀN THÀNH (`phase-1`) |
 | **Phase 2** (Ba Hòn Đảo) | ~38,000 | ~9,500 | 12 / 12 tests | ĐÃ HOÀN THÀNH (`phase-2`) |
+| **Phase 3** (Đèn Cạn Dầu) | ~42,000 | ~11,000 | 14 / 14 tests | ĐÃ HOÀN THÀNH (`phase-3`) |

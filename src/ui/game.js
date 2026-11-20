@@ -62,6 +62,25 @@ class SoundSynth {
 
 const sounds = new SoundSynth();
 
+// --- Colorblind Mode Setup ---
+let isColorblind = localStorage.getItem('colorblind_mode') === 'true';
+const btnColorblind = document.getElementById('btn-colorblind');
+function applyColorblindMode() {
+  document.body.classList.toggle('colorblind-mode', isColorblind);
+  if (btnColorblind) {
+    btnColorblind.textContent = isColorblind ? '👁 Bảng màu: Dễ nhìn' : '👁 Bảng màu: Chuẩn';
+    btnColorblind.style.borderColor = isColorblind ? '#00B3FF' : '#5B5F6E';
+  }
+}
+applyColorblindMode();
+if (btnColorblind) {
+  btnColorblind.addEventListener('click', () => {
+    isColorblind = !isColorblind;
+    localStorage.setItem('colorblind_mode', isColorblind ? 'true' : 'false');
+    applyColorblindMode();
+  });
+}
+
 // --- Three.js Setup ---
 const canvas = document.getElementById('game-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
@@ -251,15 +270,18 @@ function createLanternMesh(lanternData) {
   pillarMesh.position.y = 1.5;
   group.add(pillarMesh);
 
-  // Large Paper Lantern Core: unlit #5B5F6E with faint amber glow, lit #FFB347 / #FFE9B0
+  // Large Paper Lantern Core: unlit #5B5F6E, lit #FFB347 / #FFE9B0
   const coreGeom = new THREE.CylinderGeometry(0.7, 0.7, 1.2, 16);
   const coreMat = new THREE.MeshStandardMaterial({
     color: lanternData.lit ? 0xFFE9B0 : 0x5B5F6E,
-    emissive: lanternData.lit ? 0xFFB347 : 0x5B5F6E,
-    emissiveIntensity: lanternData.lit ? 2.0 : 0.4
+    emissive: lanternData.lit ? 0xFFB347 : 0x1B2350,
+    emissiveIntensity: lanternData.lit ? 2.0 : 0.2
   });
   const coreMesh = new THREE.Mesh(coreGeom, coreMat);
   coreMesh.position.y = 2.5;
+  if (!lanternData.lit) {
+    coreMesh.scale.set(1.0, 0.8, 1.0); // Đèn tắt bị xẹp 20%
+  }
   group.add(coreMesh);
 
   const roofGeom = new THREE.ConeGeometry(1.4, 0.7, 6);
@@ -268,12 +290,31 @@ function createLanternMesh(lanternData) {
   roofMesh.position.y = 3.35;
   group.add(roofMesh);
 
-  const light = new THREE.PointLight(0xFFB347, lanternData.lit ? 4.5 : 0.5, 25);
+  const light = new THREE.PointLight(0xFFB347, lanternData.lit ? 4.5 : 0.2, 25);
   light.position.set(0, 2.6, 0);
   group.add(light);
 
+  // 3D Fuel Bar above lantern
+  const fuelBarGroup = new THREE.Group();
+  fuelBarGroup.position.set(0, 4.3, 0);
+
+  const bgGeom = new THREE.BoxGeometry(1.4, 0.16, 0.08);
+  const bgMat = new THREE.MeshBasicMaterial({ color: 0x1B2350 });
+  const bgMesh = new THREE.Mesh(bgGeom, bgMat);
+  fuelBarGroup.add(bgMesh);
+
+  const fillGeom = new THREE.BoxGeometry(1.36, 0.12, 0.1);
+  fillGeom.translate(0.68, 0, 0);
+  const fillMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+  const fillMesh = new THREE.Mesh(fillGeom, fillMat);
+  fillMesh.position.set(-0.68, 0, 0.01);
+  fuelBarGroup.add(fillMesh);
+
+  fuelBarGroup.visible = !!lanternData.lit;
+  group.add(fuelBarGroup);
+
   scene.add(group);
-  lanternMeshes.set(lanternData.id, { group, coreMesh, light });
+  lanternMeshes.set(lanternData.id, { group, coreMesh, light, fuelBarGroup, fillMesh, fillMat });
 }
 
 function clearAllLanterns() {
@@ -281,6 +322,45 @@ function clearAllLanterns() {
     scene.remove(m.group);
   }
   lanternMeshes.clear();
+}
+
+function updateLanternVisuals() {
+  const blinkOn = Math.floor(Date.now() / 500) % 2 === 0;
+  for (const l of engine.lanterns) {
+    const m = lanternMeshes.get(l.id);
+    if (!m) continue;
+
+    if (!l.lit) {
+      m.fuelBarGroup.visible = false;
+      m.coreMesh.scale.set(1.0, 0.8, 1.0); // 20% crushed when unlit
+      m.coreMesh.material.color.setHex(0x5B5F6E);
+      m.coreMesh.material.emissive.setHex(0x1B2350);
+      m.coreMesh.material.emissiveIntensity = 0.2;
+      m.light.intensity = 0.2;
+    } else {
+      m.fuelBarGroup.visible = true;
+      m.coreMesh.scale.set(1.0, 1.0, 1.0);
+      m.fuelBarGroup.quaternion.copy(camera.quaternion);
+
+      const ratio = Math.max(0, Math.min(1, l.fuel / 100));
+      m.fillMesh.scale.x = ratio;
+
+      if (l.fuel < 30) {
+        // Nhấp nháy 1 Hz khi fuel < 30
+        m.light.intensity = blinkOn ? 4.5 : 1.0;
+        m.coreMesh.material.color.setHex(blinkOn ? 0xFFE9B0 : 0x886633);
+        m.coreMesh.material.emissive.setHex(blinkOn ? 0xFFB347 : 0x442208);
+        const warnColor = isColorblind ? (blinkOn ? 0xFFFFFF : 0x00B3FF) : (blinkOn ? 0xef4444 : 0x7f1d1d);
+        m.fillMat.color.setHex(warnColor);
+      } else {
+        m.light.intensity = 4.5;
+        m.coreMesh.material.color.setHex(0xFFE9B0);
+        m.coreMesh.material.emissive.setHex(0xFFB347);
+        m.coreMesh.material.emissiveIntensity = 2.0;
+        m.fillMat.color.setHex(isColorblind ? 0x00B3FF : 0x22c55e);
+      }
+    }
+  }
 }
 
 // --- Motes ---
@@ -330,16 +410,18 @@ function createShadeMesh(id) {
   const body = new THREE.Mesh(shadeGeom, mat);
   group.add(body);
 
-  const eyeL = new THREE.Mesh(eyeGeom, eyeMat);
+  const leftEyeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+  const rightEyeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+  const eyeL = new THREE.Mesh(eyeGeom, leftEyeMat);
   eyeL.position.set(-0.22, 0.15, 0.6);
   group.add(eyeL);
 
-  const eyeR = new THREE.Mesh(eyeGeom, eyeMat);
+  const eyeR = new THREE.Mesh(eyeGeom, rightEyeMat);
   eyeR.position.set(0.22, 0.15, 0.6);
   group.add(eyeR);
 
   scene.add(group);
-  return { group, body };
+  return { group, body, eyeL, eyeR };
 }
 
 function updateShadeMeshes(shadesList) {
@@ -351,6 +433,9 @@ function updateShadeMeshes(shadesList) {
     }
   }
 
+  const rimColor = isColorblind ? 0x00B3FF : 0x7A3CFF;
+  const eyeColor = isColorblind ? 0x00B3FF : 0xef4444;
+
   for (const s of shadesList) {
     let data = shadeMeshes.get(s.id);
     if (!data) {
@@ -360,12 +445,22 @@ function updateShadeMeshes(shadesList) {
     const hover = Math.sin(Date.now() * 0.007 + s.pos[2]) * 0.18;
     data.group.position.set(s.pos[0], (s.pos[1] || 0) + 0.85 + hover, s.pos[2]);
 
+    data.eyeL.material.color.setHex(eyeColor);
+    data.eyeR.material.color.setHex(eyeColor);
+
     if (s.state === 'stunned') {
       data.body.material.color.setHex(0x3A3450);
+      data.body.material.emissive.setHex(0x221A30);
       data.group.rotation.y += 0.12;
       data.group.scale.set(0.7, 0.7, 0.7);
+    } else if (s.state === 'drain') {
+      data.body.material.color.setHex(0x120A1A);
+      data.body.material.emissive.setHex(isColorblind ? 0x00B3FF : 0xC026D3);
+      data.group.scale.set(1.1, 0.9 + Math.sin(Date.now() * 0.02) * 0.1, 1.1);
+      data.group.lookAt(playerGroup.position.x, playerGroup.position.y + 0.8, playerGroup.position.z);
     } else {
       data.body.material.color.setHex(0x120A1A);
+      data.body.material.emissive.setHex(rimColor);
       data.group.scale.set(1.0, 1.0, 1.0);
       data.group.lookAt(playerGroup.position.x, playerGroup.position.y + 0.8, playerGroup.position.z);
     }
@@ -565,18 +660,12 @@ function animate(currentTime) {
 
     for (const ev of events) {
       if (ev.name === 'mote_picked') sounds.playPickup();
-      else if (ev.name === 'deposit') sounds.playDeposit();
+      else if (ev.name === 'deposit' || ev.name === 'refuel') sounds.playDeposit();
+      else if (ev.name === 'lantern_out') sounds.playLose();
       else if (ev.name === 'dash') sounds.playDash();
       else if (ev.name === 'charm_picked') sounds.playCharm();
       else if (ev.name === 'lantern_lit') {
         sounds.playLanternLit();
-        const lMesh = lanternMeshes.get(ev.data.lantern_id);
-        if (lMesh) {
-          lMesh.coreMesh.material.color.setHex(0xFFE9B0);
-          lMesh.coreMesh.material.emissive.setHex(0xFFB347);
-          lMesh.coreMesh.material.emissiveIntensity = 2.5;
-          lMesh.light.intensity = 5.0;
-        }
       } else if (ev.name === 'pulse') {
         sounds.playPulse();
         triggerPulseVisual(engine.player.pos);
@@ -591,11 +680,11 @@ function animate(currentTime) {
           sounds.playWin();
           const subtitle = currentNight === 3
             ? 'Bình minh rực rỡ đã trở lại! Bạn đã hoàn thành xuất sắc cả 3 Đêm!'
-            : `Đêm ${currentNight} hoàn thành! Bạn đã thắp sáng toàn bộ ngọn đèn!`;
-          showGameOverModal(true, currentNight === 3 ? 'BÌNH MINH TOÀN THẮNG!' : 'CHIẾN THẮNG!', subtitle);
+            : `Đêm ${currentNight} bình minh tới! Bạn đã bảo vệ thành công các ngọn đèn!`;
+          showGameOverModal(true, 'BÌNH MINH TOÀN THẮNG!', subtitle);
         } else {
           sounds.playLose();
-          const reasonMsg = ev.data.reason === 'dawn' ? 'Bình minh đã đến trước khi kịp thắp đèn!' : 'Mây đã mất hết ngọn lửa!';
+          const reasonMsg = ev.data.reason === 'dawn' ? 'Bình minh đã đến nhưng số đèn sáng không đạt yêu cầu!' : 'Mây đã mất hết ngọn lửa!';
           showGameOverModal(false, 'THẤT BẠI!', reasonMsg);
         }
       }
@@ -625,6 +714,7 @@ function animate(currentTime) {
   camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.2, playerGroup.position.z);
 
   // Update Dynamic Entities
+  updateLanternVisuals();
   updateMoteMeshes(engine.motes);
   updateShadeMeshes(engine.shades);
   updateDrifterMeshes(engine.drifters);
@@ -673,13 +763,24 @@ function updateHUD() {
     }
   }
 
-  // Carried Motes (10 dots)
-  document.getElementById('carried-count').textContent = `${engine.player.carried}/10`;
-  const dots = document.querySelectorAll('.mote-dot');
-  dots.forEach((dot, idx) => {
-    if (idx < engine.player.carried) dot.classList.add('filled');
-    else dot.classList.remove('filled');
-  });
+  // Carried Motes (Capacity grows up to 20)
+  const cap = engine.player.capacity || 10;
+  document.getElementById('carried-count').textContent = `${engine.player.carried}/${cap}`;
+  const dotsContainer = document.getElementById('mote-dots');
+  if (dotsContainer) {
+    while (dotsContainer.children.length < cap) {
+      const dot = document.createElement('div');
+      dot.className = 'mote-dot';
+      dotsContainer.appendChild(dot);
+    }
+    while (dotsContainer.children.length > cap) {
+      dotsContainer.removeChild(dotsContainer.lastChild);
+    }
+    Array.from(dotsContainer.children).forEach((dot, idx) => {
+      if (idx < engine.player.carried) dot.classList.add('filled');
+      else dot.classList.remove('filled');
+    });
+  }
 
   // Cooldown indicators
   const dashBox = document.getElementById('cd-box-dash');
@@ -704,11 +805,11 @@ function updateHUD() {
     pulseOverlay.style.display = 'none';
   }
 
-  // Interaction prompt near unlit lanterns
-  const unlit = engine.lanterns.filter((l) => !l.lit);
+  // Interaction prompt near receptive lanterns (!lit || fuel < 100)
+  const receptive = engine.lanterns.filter((l) => !l.lit || l.fuel < 100);
   let nearestLantern = null;
   let minDist = Infinity;
-  for (const l of unlit) {
+  for (const l of receptive) {
     const d = Math.hypot(engine.player.pos[0] - l.pos[0], engine.player.pos[2] - l.pos[2]);
     if (d <= engine.tuning.interact_radius && d < minDist) {
       minDist = d;
@@ -719,7 +820,15 @@ function updateHUD() {
   const promptEl = document.getElementById('interact-prompt');
   if (nearestLantern) {
     promptEl.style.display = 'block';
-    promptEl.textContent = `E — Nạp ánh sáng (${nearestLantern.deposited}/10)`;
+    if (!nearestLantern.lit) {
+      if (nearestLantern.ever_lit) {
+        promptEl.textContent = `E — Thắp lại (${nearestLantern.deposited}/5)`;
+      } else {
+        promptEl.textContent = `E — Thắp đèn (${nearestLantern.deposited}/10)`;
+      }
+    } else {
+      promptEl.textContent = `E — Châm dầu (${Math.floor(nearestLantern.fuel)}/100)`;
+    }
   } else {
     promptEl.style.display = 'none';
   }

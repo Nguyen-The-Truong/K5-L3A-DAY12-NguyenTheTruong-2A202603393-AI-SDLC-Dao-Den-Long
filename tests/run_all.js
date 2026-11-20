@@ -10,6 +10,8 @@ import { testDrifter } from './scenario_drifter.test.js';
 import { testCharm } from './scenario_charm.test.js';
 import { testPause } from './scenario_pause.test.js';
 import { testNight2JumpPad } from './scenario_night2_jump_pad.test.js';
+import { testFuelDecayAndRelight } from './scenario_fuel_decay_out.test.js';
+import { testShadeDrain } from './scenario_shade_drain.test.js';
 
 console.log('====================================');
 console.log('  RUNNING ĐẢO ĐÈN LỒNG TEST SUITE   ');
@@ -24,7 +26,7 @@ try {
   testShadeHitAndLoss();
   testE2EHeadless();
 
-  // Phase 2 new features
+  // Phase 2 features
   testDash();
   testJumpAndFall();
   testDrifter();
@@ -32,8 +34,12 @@ try {
   testPause();
   testNight2JumpPad();
 
+  // Phase 3 features (Change Request: Oil & Drain)
+  testFuelDecayAndRelight();
+  testShadeDrain();
+
   console.log('\n====================================');
-  console.log('  ALL 12 TESTS PASSED SUCCESSFULLY! ');
+  console.log('  ALL 14 TESTS PASSED SUCCESSFULLY! ');
   console.log('====================================');
   process.exit(0);
 } catch (err) {
