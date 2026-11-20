@@ -3,7 +3,8 @@
 > **Tác giả:** Nguyễn Thế Trường — **MSSV:** 2A202603393  
 > **Lớp:** K5-L3A · Khóa 5 — VinAI Engineering Program  
 > **Dự án:** Game 3D Đảo Đèn Lồng phát triển theo quy trình AI SDLC 4 Pha  
-> **Tag nghiệm thu phát hành:** `phase-4` · **Release:** `v1.0.0` (Contract v1.3)
+> **Tag nghiệm thu phát hành:** `phase-4` · **Release:** `v1.0.0` (Contract v1.3)  
+> **Video Demo (< 5 phút):** [Xem Video Demo (Release v1.0.0)](https://github.com/Nguyen-The-Truong/K5-L3A-DAY12-NguyenTheTruong-2A202603393-AI-SDLC-Dao-Den-Long/releases/tag/v1.0.0) *(hoặc tệp `docs/demo/demo.mp4`)*
 
 ---
 
