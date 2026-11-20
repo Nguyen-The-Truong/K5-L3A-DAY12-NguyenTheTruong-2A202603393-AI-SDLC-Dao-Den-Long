@@ -1,5 +1,5 @@
 // 3D Game UI implementation for Đảo Đèn Lồng using Three.js
-import * as THREE from './three.module.js';
+import * as THREE from 'three';
 import { GameEngine, DEFAULT_TUNING } from '../core/engine.js';
 
 // --- Sound Synthesizer (Web Audio API - Zero Asset Dependency) ---

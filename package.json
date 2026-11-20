@@ -8,9 +8,14 @@
     "start": "node server.js",
     "test": "node tests/run_all.js",
     "headless": "node src/headless.js",
+    "build:ui": "esbuild src/ui/game.js --bundle --format=iife --outfile=src/ui/bundle.js",
+    "build": "npm run build:ui",
     "build:check": "node -e \"console.log('Build OK')\""
   },
   "dependencies": {
     "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

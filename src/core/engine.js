@@ -343,8 +343,8 @@ export class GameEngine {
           const dist = Math.hypot(dx, dz);
 
           if (dist > 0.001) {
-            const nextX = shade.pos[0] + (dx / dist) * this.tuning.shade_speed * dt;
-            const nextZ = shade.pos[2] + (dz / dist) * this.tuning.shade_speed * dt;
+            let nextX = shade.pos[0] + (dx / dist) * this.tuning.shade_speed * dt;
+            let nextZ = shade.pos[2] + (dz / dist) * this.tuning.shade_speed * dt;
 
             // Safe zone check around lit lanterns
             let inSafeZone = false;
