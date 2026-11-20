@@ -50,25 +50,25 @@
       "seed": 2
     },
     {
-      "name": "Gamma",
-      "score": 180,
-      "nights_won": 1,
-      "achieved_at": "2026-11-20T09:55:46.433Z",
-      "seed": 3
+      "name": "Beta",
+      "score": 250,
+      "nights_won": 2,
+      "achieved_at": "2026-11-20T10:26:40.671Z",
+      "seed": 2
     },
     {
-      "name": "Gamma",
-      "score": 180,
-      "nights_won": 1,
-      "achieved_at": "2026-11-20T09:56:19.503Z",
-      "seed": 3
+      "name": "Beta",
+      "score": 250,
+      "nights_won": 2,
+      "achieved_at": "2026-11-20T10:32:24.234Z",
+      "seed": 2
     },
     {
-      "name": "Gamma",
-      "score": 180,
-      "nights_won": 1,
-      "achieved_at": "2026-11-20T09:59:52.976Z",
-      "seed": 3
+      "name": "Beta",
+      "score": 250,
+      "nights_won": 2,
+      "achieved_at": "2026-11-20T10:40:40.889Z",
+      "seed": 2
     }
   ]
 }
