@@ -1,0 +1,74 @@
+{
+  "entries": [
+    {
+      "name": "Beta",
+      "score": 250,
+      "nights_won": 2,
+      "achieved_at": "2026-11-20T09:55:46.432Z",
+      "seed": 2
+    },
+    {
+      "name": "Beta",
+      "score": 250,
+      "nights_won": 2,
+      "achieved_at": "2026-11-20T09:56:19.503Z",
+      "seed": 2
+    },
+    {
+      "name": "Beta",
+      "score": 250,
+      "nights_won": 2,
+      "achieved_at": "2026-11-20T09:59:52.975Z",
+      "seed": 2
+    },
+    {
+      "name": "Beta",
+      "score": 250,
+      "nights_won": 2,
+      "achieved_at": "2026-11-20T10:02:10.364Z",
+      "seed": 2
+    },
+    {
+      "name": "Gamma",
+      "score": 180,
+      "nights_won": 1,
+      "achieved_at": "2026-11-20T09:55:46.433Z",
+      "seed": 3
+    },
+    {
+      "name": "Gamma",
+      "score": 180,
+      "nights_won": 1,
+      "achieved_at": "2026-11-20T09:56:19.503Z",
+      "seed": 3
+    },
+    {
+      "name": "Gamma",
+      "score": 180,
+      "nights_won": 1,
+      "achieved_at": "2026-11-20T09:59:52.976Z",
+      "seed": 3
+    },
+    {
+      "name": "Gamma",
+      "score": 180,
+      "nights_won": 1,
+      "achieved_at": "2026-11-20T10:02:10.364Z",
+      "seed": 3
+    },
+    {
+      "name": "Alpha",
+      "score": 100,
+      "nights_won": 1,
+      "achieved_at": "2026-11-20T09:55:46.430Z",
+      "seed": 1
+    },
+    {
+      "name": "Alpha",
+      "score": 100,
+      "nights_won": 1,
+      "achieved_at": "2026-11-20T09:56:19.501Z",
+      "seed": 1
+    }
+  ]
+}

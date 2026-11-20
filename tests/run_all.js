@@ -12,38 +12,50 @@ import { testPause } from './scenario_pause.test.js';
 import { testNight2JumpPad } from './scenario_night2_jump_pad.test.js';
 import { testFuelDecayAndRelight } from './scenario_fuel_decay_out.test.js';
 import { testShadeDrain } from './scenario_shade_drain.test.js';
+import { testSoakRunner } from './scenario_soak.test.js';
+import { testBenchmark } from './scenario_bench.test.js';
+import { testLeaderboard } from './scenario_leaderboard.test.js';
 
 console.log('====================================');
 console.log('  RUNNING ĐẢO ĐÈN LỒNG TEST SUITE   ');
 console.log('====================================\n');
 
-try {
-  // Phase 1 regression
-  testDeterminism();
-  testPickup();
-  testLanternDepositAndWin();
-  testPulseStun();
-  testShadeHitAndLoss();
-  testE2EHeadless();
+async function runAll() {
+  try {
+    // Phase 1 regression
+    testDeterminism();
+    testPickup();
+    testLanternDepositAndWin();
+    testPulseStun();
+    testShadeHitAndLoss();
+    testE2EHeadless();
 
-  // Phase 2 features
-  testDash();
-  testJumpAndFall();
-  testDrifter();
-  testCharm();
-  testPause();
-  testNight2JumpPad();
+    // Phase 2 features
+    testDash();
+    testJumpAndFall();
+    testDrifter();
+    testCharm();
+    testPause();
+    testNight2JumpPad();
 
-  // Phase 3 features (Change Request: Oil & Drain)
-  testFuelDecayAndRelight();
-  testShadeDrain();
+    // Phase 3 features (Change Request: Oil & Drain)
+    testFuelDecayAndRelight();
+    testShadeDrain();
 
-  console.log('\n====================================');
-  console.log('  ALL 14 TESTS PASSED SUCCESSFULLY! ');
-  console.log('====================================');
-  process.exit(0);
-} catch (err) {
-  console.error('\n❌ TEST FAILURE:', err.message);
-  console.error(err.stack);
-  process.exit(1);
+    // Phase 4 features (Release, Benchmark, Soak, Leaderboard)
+    testLeaderboard();
+    await testBenchmark();
+    await testSoakRunner();
+
+    console.log('\n====================================');
+    console.log('  ALL 17 TESTS PASSED SUCCESSFULLY! ');
+    console.log('====================================');
+    process.exit(0);
+  } catch (err) {
+    console.error('\n❌ TEST FAILURE:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+  }
 }
+
+runAll();

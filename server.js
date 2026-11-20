@@ -1,8 +1,19 @@
-// Simple local static web server for Đảo Đèn Lồng
+// Simple local static web server for Đảo Đèn Lồng (Contract v1.3)
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getLeaderboard, addLeaderboardEntry, exportLeaderboardToFile } from './src/core/leaderboard.js';
+
+// CLI export leaderboard flag support: npm start -- --export-leaderboard out.json
+const args = process.argv.slice(2);
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--export-leaderboard') {
+    const targetFile = args[i + 1] || 'leaderboard.json';
+    exportLeaderboardToFile(targetFile);
+    process.exit(0);
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +33,31 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   let reqPath = req.url.split('?')[0];
+
+  // API endpoints for leaderboard
+  if (reqPath === '/api/leaderboard') {
+    if (req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=UTF-8' });
+      res.end(JSON.stringify({ entries: getLeaderboard() }));
+      return;
+    } else if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const data = JSON.parse(body || '{}');
+          const updated = addLeaderboardEntry(data);
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=UTF-8' });
+          res.end(JSON.stringify({ success: true, entries: updated }));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json; charset=UTF-8' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+      return;
+    }
+  }
+
   if (reqPath === '/' || reqPath === '') {
     reqPath = '/src/ui/index.html';
   }
@@ -48,10 +84,10 @@ const server = http.createServer((req, res) => {
     if (err) {
       if (err.code === 'ENOENT') {
         res.writeHead(404, { 'Content-Type': 'text/plain; charset=UTF-8' });
-        res.end('404 Not Found');
+        res.end(`404 Not Found: ${reqPath}`);
       } else {
         res.writeHead(500, { 'Content-Type': 'text/plain; charset=UTF-8' });
-        res.end(`500 Internal Server Error: ${err.code}`);
+        res.end(`500 Server Error: ${err.code}`);
       }
     } else {
       res.writeHead(200, { 'Content-Type': contentType });
@@ -61,9 +97,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`\n🏮 =================================================`);
-  console.log(`   ĐẢO ĐÈN LỒNG - SERVER ĐANG CHẠY TẠI:`);
-  console.log(`   http://localhost:${PORT}`);
-  console.log(`   Nhấn Ctrl+C để dừng server.`);
-  console.log(`================================================= 🏮\n`);
+  console.log(`Đảo Đèn Lồng 3D Game Server running at: http://localhost:${PORT}`);
 });

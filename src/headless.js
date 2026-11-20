@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { GameEngine, DEFAULT_TUNING } from './core/engine.js';
+import { exportLeaderboardToFile } from './core/leaderboard.js';
 
 function printUsageAndExit(code = 1, msg = '') {
   if (msg) console.error(msg);
@@ -22,7 +23,11 @@ let snapshotEvery = 10;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
-  if (arg === '--seed') {
+  if (arg === '--export-leaderboard') {
+    const targetFile = args[++i] || 'leaderboard.json';
+    exportLeaderboardToFile(targetFile);
+    process.exit(0);
+  } else if (arg === '--seed') {
     seed = parseInt(args[++i], 10);
     if (Number.isNaN(seed)) printUsageAndExit(1, 'Invalid --seed');
   } else if (arg === '--night') {

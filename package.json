@@ -8,6 +8,8 @@
     "start": "node server.js",
     "test": "node tests/run_all.js",
     "headless": "node src/headless.js",
+    "bench": "node src/bench.js",
+    "soak": "node src/soak.js",
     "build:ui": "esbuild src/ui/game.js --bundle --format=iife --outfile=src/ui/bundle.js",
     "build": "npm run build:ui",
     "build:check": "node -e \"console.log('Build OK')\""

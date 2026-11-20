@@ -1,6 +1,7 @@
 // 3D Game UI implementation for Đảo Đèn Lồng (Phase 2: Ba Hòn Đảo) using Three.js
 import * as THREE from 'three';
 import { GameEngine, DEFAULT_TUNING } from '../core/engine.js';
+import { setupBenchmarkScene } from '../core/bench_setup.js';
 
 // --- Sound Synthesizer (Web Audio API) ---
 class SoundSynth {
@@ -541,46 +542,251 @@ function triggerPulseVisual(pos) {
   pulseAnimProgress = 0;
 }
 
-// --- Input Tracker ---
+// --- Input Tracker with Customizable Keybindings ---
+const DEFAULT_KEY_BINDINGS = {
+  up: 'w',
+  down: 's',
+  left: 'a',
+  right: 'd',
+  jump: ' ',
+  dash: 'shift',
+  interact: 'e',
+  pulse: 'q',
+  pause: 'escape'
+};
+
+let keyBindings = { ...DEFAULT_KEY_BINDINGS };
+try {
+  const saved = localStorage.getItem('dao_den_long_keybinds');
+  if (saved) keyBindings = { ...DEFAULT_KEY_BINDINGS, ...JSON.parse(saved) };
+} catch (e) {}
+
+function saveKeyBindings() {
+  localStorage.setItem('dao_den_long_keybinds', JSON.stringify(keyBindings));
+  updateKeyBindLabels();
+}
+
+function getDisplayKey(k) {
+  if (k === ' ') return 'Space';
+  if (k === 'escape') return 'Esc';
+  if (k === 'shift') return 'Shift';
+  return k.toUpperCase();
+}
+
+function updateKeyBindLabels() {
+  for (const [action, key] of Object.entries(keyBindings)) {
+    const btn = document.getElementById(`bind-${action}`);
+    if (btn) btn.textContent = getDisplayKey(key);
+  }
+
+  const lblDash = document.getElementById('lbl-dash');
+  if (lblDash) lblDash.textContent = `${getDisplayKey(keyBindings.dash)} · Lướt`;
+  const lblPulse = document.getElementById('lbl-pulse');
+  if (lblPulse) lblPulse.textContent = `${getDisplayKey(keyBindings.pulse)} · Tỏa Sáng`;
+
+  const kw = document.getElementById('k-w'); if (kw) kw.textContent = getDisplayKey(keyBindings.up);
+  const ka = document.getElementById('k-a'); if (ka) ka.textContent = getDisplayKey(keyBindings.left);
+  const ks = document.getElementById('k-s'); if (ks) ks.textContent = getDisplayKey(keyBindings.down);
+  const kd = document.getElementById('k-d'); if (kd) kd.textContent = getDisplayKey(keyBindings.right);
+  const kspace = document.getElementById('k-space'); if (kspace) kspace.textContent = getDisplayKey(keyBindings.jump);
+  const kshift = document.getElementById('k-shift'); if (kshift) kshift.textContent = getDisplayKey(keyBindings.dash);
+  const ke = document.getElementById('k-e'); if (ke) ke.textContent = getDisplayKey(keyBindings.interact);
+  const kq = document.getElementById('k-q'); if (kq) kq.textContent = getDisplayKey(keyBindings.pulse);
+  const kesc = document.getElementById('k-esc'); if (kesc) kesc.textContent = getDisplayKey(keyBindings.pause);
+}
+updateKeyBindLabels();
+
 const keys = {
   w: false, a: false, s: false, d: false,
   space: false, e: false, q: false, shift: false, esc: false
 };
 
+let rebindingAction = null;
+const conflictMsg = document.getElementById('key-conflict-msg');
+
+document.querySelectorAll('.btn-key-bind').forEach((btn) => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const action = btn.getAttribute('data-action');
+    if (rebindingAction === action) {
+      rebindingAction = null;
+      btn.classList.remove('listening');
+      if (conflictMsg) conflictMsg.style.display = 'none';
+      updateKeyBindLabels();
+      return;
+    }
+    document.querySelectorAll('.btn-key-bind').forEach((b) => b.classList.remove('listening'));
+    rebindingAction = action;
+    btn.classList.add('listening');
+    btn.textContent = 'Bấm phím...';
+    if (conflictMsg) conflictMsg.style.display = 'none';
+  });
+});
+
+const btnResetKeys = document.getElementById('btn-reset-keys');
+if (btnResetKeys) {
+  btnResetKeys.addEventListener('click', () => {
+    keyBindings = { ...DEFAULT_KEY_BINDINGS };
+    rebindingAction = null;
+    document.querySelectorAll('.btn-key-bind').forEach((b) => b.classList.remove('listening'));
+    if (conflictMsg) conflictMsg.style.display = 'none';
+    saveKeyBindings();
+  });
+}
+
+// Subtitles & Visual Indicators
+const subtitleBox = document.getElementById('subtitle-box');
+let subtitleTimer = null;
+function showSubtitle(text, duration = 2500) {
+  if (!subtitleBox) return;
+  subtitleBox.textContent = text;
+  subtitleBox.style.display = 'block';
+  if (subtitleTimer) clearTimeout(subtitleTimer);
+  subtitleTimer = setTimeout(() => {
+    subtitleBox.style.display = 'none';
+  }, duration);
+}
+
+const threatPointer = document.getElementById('threat-pointer');
+function updateThreatPointer() {
+  if (!threatPointer || !engine) return;
+  let closestChaser = null;
+  let minD = Infinity;
+  for (const s of engine.shades) {
+    if (s.state === 'chase') {
+      const d = Math.hypot(s.pos[0] - engine.player.pos[0], s.pos[2] - engine.player.pos[2]);
+      if (d < minD) {
+        minD = d;
+        closestChaser = s;
+      }
+    }
+  }
+
+  if (closestChaser && minD <= 24.0) {
+    const dx = closestChaser.pos[0] - engine.player.pos[0];
+    const dz = closestChaser.pos[2] - engine.player.pos[2];
+    const angle = Math.atan2(dx, dz);
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight;
+    const r = Math.min(screenW, screenH) * 0.40;
+    const cx = screenW / 2 + Math.sin(angle) * r;
+    const cy = screenH / 2 - Math.cos(angle) * r;
+
+    threatPointer.style.display = 'flex';
+    threatPointer.style.left = `${Math.max(20, Math.min(screenW - 60, cx))}px`;
+    threatPointer.style.top = `${Math.max(60, Math.min(screenH - 60, cy))}px`;
+    threatPointer.style.transform = `rotate(${angle + Math.PI}rad)`;
+  } else {
+    threatPointer.style.display = 'none';
+  }
+}
+
+// Accessibility Toggles
+let isLargeFont = localStorage.getItem('dao_den_long_large_font') === 'true';
+let reduceMotion = localStorage.getItem('dao_den_long_reduce_motion') === 'true';
+
+const chkLargeFont = document.getElementById('chk-large-font');
+if (chkLargeFont) {
+  chkLargeFont.checked = isLargeFont;
+  document.body.classList.toggle('large-font', isLargeFont);
+  chkLargeFont.addEventListener('change', () => {
+    isLargeFont = chkLargeFont.checked;
+    localStorage.setItem('dao_den_long_large_font', isLargeFont ? 'true' : 'false');
+    document.body.classList.toggle('large-font', isLargeFont);
+  });
+}
+
+const chkReduceMotion = document.getElementById('chk-reduce-motion');
+if (chkReduceMotion) {
+  chkReduceMotion.checked = reduceMotion;
+  chkReduceMotion.addEventListener('change', () => {
+    reduceMotion = chkReduceMotion.checked;
+    localStorage.setItem('dao_den_long_reduce_motion', reduceMotion ? 'true' : 'false');
+  });
+}
+
+const chkColorblindOpt = document.getElementById('chk-colorblind-opt');
+if (chkColorblindOpt) {
+  chkColorblindOpt.checked = isColorblind;
+  chkColorblindOpt.addEventListener('change', () => {
+    isColorblind = chkColorblindOpt.checked;
+    localStorage.setItem('colorblind_mode', isColorblind ? 'true' : 'false');
+    applyColorblindMode();
+  });
+}
+
+// Keyboard input listeners
 window.addEventListener('keydown', (e) => {
   sounds.ensureContext();
   const k = e.key.toLowerCase();
-  if (k === 'w' || k === 'arrowup') keys.w = true;
-  if (k === 's' || k === 'arrowdown') keys.s = true;
-  if (k === 'a' || k === 'arrowleft') keys.a = true;
-  if (k === 'd' || k === 'arrowright') keys.d = true;
-  if (k === ' ') keys.space = true;
-  if (k === 'e') keys.e = true;
-  if (k === 'q' || k === 'f') keys.q = true;
-  if (k === 'shift') keys.shift = true;
-  if (k === 'escape' || k === 'p') keys.esc = true;
+
+  if (rebindingAction) {
+    e.preventDefault();
+    let duplicateAction = null;
+    for (const [act, key] of Object.entries(keyBindings)) {
+      if (act !== rebindingAction && key === k) {
+        duplicateAction = act;
+        break;
+      }
+    }
+
+    if (duplicateAction) {
+      if (conflictMsg) {
+        conflictMsg.style.display = 'block';
+        conflictMsg.textContent = `⚠ Phím "${getDisplayKey(k)}" đã được gán cho hành động khác!`;
+      }
+      return;
+    }
+
+    if (conflictMsg) conflictMsg.style.display = 'none';
+    keyBindings[rebindingAction] = k;
+    rebindingAction = null;
+    document.querySelectorAll('.btn-key-bind').forEach((b) => b.classList.remove('listening'));
+    saveKeyBindings();
+    return;
+  }
+
+  if (k === keyBindings.up) keys.w = true;
+  if (k === keyBindings.down) keys.s = true;
+  if (k === keyBindings.left) keys.a = true;
+  if (k === keyBindings.right) keys.d = true;
+  if (k === keyBindings.jump) keys.space = true;
+  if (k === keyBindings.dash) keys.shift = true;
+  if (k === keyBindings.interact) keys.e = true;
+  if (k === keyBindings.pulse) keys.q = true;
+  if (k === keyBindings.pause) keys.esc = true;
 });
 
 window.addEventListener('keyup', (e) => {
   const k = e.key.toLowerCase();
-  if (k === 'w' || k === 'arrowup') keys.w = false;
-  if (k === 's' || k === 'arrowdown') keys.s = false;
-  if (k === 'a' || k === 'arrowleft') keys.a = false;
-  if (k === 'd' || k === 'arrowright') keys.d = false;
-  if (k === ' ') keys.space = false;
-  if (k === 'e') keys.e = false;
-  if (k === 'q' || k === 'f') keys.q = false;
-  if (k === 'shift') keys.shift = false;
-  if (k === 'escape' || k === 'p') keys.esc = false;
+  if (k === keyBindings.up) keys.w = false;
+  if (k === keyBindings.down) keys.s = false;
+  if (k === keyBindings.left) keys.a = false;
+  if (k === keyBindings.right) keys.d = false;
+  if (k === keyBindings.jump) keys.space = false;
+  if (k === keyBindings.dash) keys.shift = false;
+  if (k === keyBindings.interact) keys.e = false;
+  if (k === keyBindings.pulse) keys.q = false;
+  if (k === keyBindings.pause) keys.esc = false;
 });
 
 // --- Engine State Management ---
 let currentNight = 1;
 let engine = null;
+const isWebBench = new URLSearchParams(window.location.search).get('bench') === 'true';
+let benchStartTime = performance.now();
+let alerted10s = false;
+let alertedWind = false;
+const alertedLowFuel = new Set();
 
 function loadNight(n) {
   currentNight = n;
   engine = new GameEngine({ seed: Date.now() % 100000, night: n });
+
+  if (isWebBench) {
+    setupBenchmarkScene(engine, 42);
+  }
+
   buildWorldMeshes(n);
   clearAllLanterns();
   for (const l of engine.lanterns) {
@@ -600,6 +806,125 @@ loadNight(1);
 document.getElementById('btn-night-1').addEventListener('click', () => loadNight(1));
 document.getElementById('btn-night-2').addEventListener('click', () => loadNight(2));
 document.getElementById('btn-night-3').addEventListener('click', () => loadNight(3));
+
+// Settings modal buttons
+const settingsModal = document.getElementById('settings-modal');
+const btnOpenSettings = document.getElementById('btn-open-settings');
+const btnCloseSettings = document.getElementById('btn-close-settings');
+if (btnOpenSettings) btnOpenSettings.addEventListener('click', () => { settingsModal.style.display = 'flex'; });
+if (btnCloseSettings) btnCloseSettings.addEventListener('click', () => { settingsModal.style.display = 'none'; });
+
+// Leaderboard modal buttons
+const leaderboardModal = document.getElementById('leaderboard-modal');
+const btnOpenLeaderboard = document.getElementById('btn-open-leaderboard');
+const btnCloseLeaderboard = document.getElementById('btn-close-leaderboard');
+const btnViewLbEnd = document.getElementById('btn-view-lb-end');
+
+async function fetchLeaderboardEntries() {
+  try {
+    const res = await fetch('/api/leaderboard');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.entries)) return data.entries;
+    }
+  } catch (e) {}
+  try {
+    const saved = localStorage.getItem('dao_den_long_leaderboard');
+    if (saved) return JSON.parse(saved);
+  } catch (e) {}
+  return [];
+}
+
+async function renderLeaderboardTable() {
+  const tbody = document.getElementById('lb-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Đang tải...</td></tr>';
+  const entries = await fetchLeaderboardEntries();
+  if (entries.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Chưa có dữ liệu nào. Hãy chơi và lưu điểm!</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  entries.slice(0, 10).forEach((entry, idx) => {
+    const tr = document.createElement('tr');
+    const rankClass = idx === 0 ? 'lb-rank-1' : idx === 1 ? 'lb-rank-2' : idx === 2 ? 'lb-rank-3' : '';
+    const dateStr = entry.achieved_at ? new Date(entry.achieved_at).toLocaleDateString() : '';
+    tr.innerHTML = `
+      <td class="${rankClass}">#${idx + 1}</td>
+      <td style="font-weight: bold;">${entry.name}</td>
+      <td style="color: #F2C14E; font-weight: bold;">${entry.score}</td>
+      <td>Đêm ${entry.nights_won || 0}</td>
+      <td style="color: #94a3b8; font-size: 0.85em;">${dateStr}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+if (btnOpenLeaderboard) {
+  btnOpenLeaderboard.addEventListener('click', () => {
+    renderLeaderboardTable();
+    leaderboardModal.style.display = 'flex';
+  });
+}
+if (btnCloseLeaderboard) {
+  btnCloseLeaderboard.addEventListener('click', () => {
+    leaderboardModal.style.display = 'none';
+  });
+}
+if (btnViewLbEnd) {
+  btnViewLbEnd.addEventListener('click', () => {
+    document.getElementById('end-modal').style.display = 'none';
+    renderLeaderboardTable();
+    leaderboardModal.style.display = 'flex';
+  });
+}
+
+// Submit score from End Modal
+const btnSubmitScore = document.getElementById('btn-submit-score');
+const inputPlayerName = document.getElementById('input-player-name');
+const saveScoreStatus = document.getElementById('save-score-status');
+
+if (btnSubmitScore) {
+  btnSubmitScore.addEventListener('click', async () => {
+    const name = (inputPlayerName.value || '').trim();
+    const nameRegex = /^[A-Za-z0-9_\u00C0-\u024F\u1EA0-\u1EF9]+$/;
+    if (name.length < 3 || name.length > 12 || !nameRegex.test(name)) {
+      alert('Tên phải từ 3 đến 12 ký tự [A-Za-z0-9_] hoặc tiếng Việt không chứa ký tự đặc biệt!');
+      return;
+    }
+
+    const payload = {
+      name,
+      score: engine.score,
+      nights_won: engine.state === 'won' ? currentNight : Math.max(0, currentNight - 1),
+      seed: engine.seed || 42,
+      achieved_at: new Date().toISOString()
+    };
+
+    // Save locally
+    try {
+      const existing = await fetchLeaderboardEntries();
+      existing.push(payload);
+      existing.sort((a, b) => b.score - a.score || new Date(a.achieved_at) - new Date(b.achieved_at));
+      localStorage.setItem('dao_den_long_leaderboard', JSON.stringify(existing.slice(0, 10)));
+    } catch (e) {}
+
+    // POST to server if available
+    try {
+      await fetch('/api/leaderboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {}
+
+    if (saveScoreStatus) {
+      saveScoreStatus.style.display = 'block';
+      saveScoreStatus.textContent = `✓ Đã lưu kỷ lục cho "${name}"!`;
+    }
+    btnSubmitScore.disabled = true;
+  });
+}
 
 // Pause modal buttons
 document.getElementById('btn-resume').addEventListener('click', () => {
@@ -666,6 +991,8 @@ function animate(currentTime) {
       else if (ev.name === 'charm_picked') sounds.playCharm();
       else if (ev.name === 'lantern_lit') {
         sounds.playLanternLit();
+      } else if (ev.name === 'shade_spawned') {
+        showSubtitle('⚠ Bóng Mực xuất hiện!', 2500);
       } else if (ev.name === 'pulse') {
         sounds.playPulse();
         triggerPulseVisual(engine.player.pos);
@@ -707,11 +1034,18 @@ function animate(currentTime) {
     playerGroup.rotation.y = THREE.MathUtils.lerp(playerGroup.rotation.y, targetAngle, 0.2);
   }
 
-  // Camera Follow
-  camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerGroup.position.x, 0.08);
-  camera.position.y = THREE.MathUtils.lerp(camera.position.y, playerGroup.position.y + 8.5, 0.08);
-  camera.position.z = THREE.MathUtils.lerp(camera.position.z, playerGroup.position.z - 12.0, 0.08);
-  camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.2, playerGroup.position.z);
+  // Camera Follow / Orbit
+  if (isWebBench) {
+    const t = (performance.now() - benchStartTime) / 1000;
+    const angle = (t / 15.0) * (Math.PI * 2);
+    camera.position.set(Math.cos(angle) * 30, 15, Math.sin(angle) * 30);
+    camera.lookAt(0, 0, 0);
+  } else {
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, playerGroup.position.x, 0.08);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, playerGroup.position.y + 8.5, 0.08);
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, playerGroup.position.z - 12.0, 0.08);
+    camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.2, playerGroup.position.z);
+  }
 
   // Update Dynamic Entities
   updateLanternVisuals();
@@ -740,7 +1074,33 @@ function animate(currentTime) {
 }
 
 function updateHUD() {
+  updateThreatPointer();
+
   const totalSeconds = Math.max(0, Math.ceil(engine.time_left_s));
+
+  if (totalSeconds <= 10 && totalSeconds > 0 && !alerted10s) {
+    showSubtitle('⏳ Sắp bình minh: 10s!', 2000);
+    alerted10s = true;
+  }
+  if (totalSeconds > 10) alerted10s = false;
+
+  if (engine.wind && engine.wind.active && !alertedWind) {
+    showSubtitle('🌬 Gió nổi lên!', 2000);
+    alertedWind = true;
+  }
+  if (engine.wind && !engine.wind.active) alertedWind = false;
+
+  for (const l of engine.lanterns) {
+    if (l.lit && l.fuel < 30) {
+      if (!alertedLowFuel.has(l.id)) {
+        showSubtitle(`🏮 Đèn ${l.id} cạn dầu!`, 2500);
+        alertedLowFuel.add(l.id);
+      }
+    } else {
+      alertedLowFuel.delete(l.id);
+    }
+  }
+
   const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
   const ss = String(totalSeconds % 60).padStart(2, '0');
   document.getElementById('hud-time').textContent = `${mm}:${ss}`;

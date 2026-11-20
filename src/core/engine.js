@@ -528,28 +528,30 @@ export class GameEngine {
     }
 
     // Phase 3: Bước 2 trừ dầu (hao hụt tự nhiên + bị Bóng Mực hút)
-    for (const l of this.lanterns) {
-      if (l.lit) {
-        // Hao hụt tự nhiên: 1/60 fuel mỗi tick (1.0 đơn vị/giây)
-        l.fuel_units -= 1;
+    if (!this.is_benchmark) {
+      for (const l of this.lanterns) {
+        if (l.lit) {
+          // Hao hụt tự nhiên: 1/60 fuel mỗi tick (1.0 đơn vị/giây)
+          l.fuel_units -= 1;
 
-        // Bị Bóng Mực hút (5/60 fuel mỗi tick)
-        for (const s of this.shades) {
-          if (s.state === "drain" && s.drain_target_id === l.id) {
-            l.fuel_units -= 5;
-            s.drain_ticks = (s.drain_ticks || 0) + 1;
-            // Ghi nhận sự kiện fuel_drain mỗi 60 tick khi đang hút
-            if (s.drain_ticks % 60 === 0) {
-              events.push({
-                type: "event",
-                tick: currentTick,
-                name: "fuel_drain",
-                data: {
-                  lantern_id: l.id,
-                  shade_id: s.id,
-                  fuel: round1(Math.max(0, l.fuel_units / 60))
-                }
-              });
+          // Bị Bóng Mực hút (5/60 fuel mỗi tick)
+          for (const s of this.shades) {
+            if (s.state === "drain" && s.drain_target_id === l.id) {
+              l.fuel_units -= 5;
+              s.drain_ticks = (s.drain_ticks || 0) + 1;
+              // Ghi nhận sự kiện fuel_drain mỗi 60 tick khi đang hút
+              if (s.drain_ticks % 60 === 0) {
+                events.push({
+                  type: "event",
+                  tick: currentTick,
+                  name: "fuel_drain",
+                  data: {
+                    lantern_id: l.id,
+                    shade_id: s.id,
+                    fuel: round1(Math.max(0, l.fuel_units / 60))
+                  }
+                });
+              }
             }
           }
         }
@@ -735,23 +737,25 @@ export class GameEngine {
 
     // 4. Pickup motes and charms
     // Motes
-    for (let i = this.motes.length - 1; i >= 0; i--) {
-      const m = this.motes[i];
-      // Pickable if not newly dropped on this tick
-      if (m.ttl_ticks === 480) continue;
+    if (!this.is_benchmark) {
+      for (let i = this.motes.length - 1; i >= 0; i--) {
+        const m = this.motes[i];
+        // Pickable if not newly dropped on this tick
+        if (m.ttl_ticks === 480) continue;
 
-      const distXZ = Math.hypot(this.player.pos[0] - m.pos[0], this.player.pos[2] - m.pos[2]);
-      const distY = Math.abs(this.player.pos[1] - m.pos[1]);
+        const distXZ = Math.hypot(this.player.pos[0] - m.pos[0], this.player.pos[2] - m.pos[2]);
+        const distY = Math.abs(this.player.pos[1] - m.pos[1]);
 
-      if (distXZ <= this.tuning.pickup_radius && distY <= 1.5 && this.player.carried < this.player.capacity) {
-        this.player.carried += 1;
-        this.motes.splice(i, 1);
-        events.push({
-          type: "event",
-          tick: currentTick,
-          name: "mote_picked",
-          data: { carried: this.player.carried }
-        });
+        if (distXZ <= this.tuning.pickup_radius && distY <= 1.5 && this.player.carried < this.player.capacity) {
+          this.player.carried += 1;
+          this.motes.splice(i, 1);
+          events.push({
+            type: "event",
+            tick: currentTick,
+            name: "mote_picked",
+            data: { carried: this.player.carried }
+          });
+        }
       }
     }
 
@@ -1146,167 +1150,173 @@ export class GameEngine {
     }
 
     // Shades hit
-    const sortedShades = [...this.shades].sort((a, b) => a.id.localeCompare(b.id));
-    for (const s of sortedShades) {
-      if (s.state !== "chase" && s.state !== "wander") continue;
+    if (!this.is_benchmark) {
+      const sortedShades = [...this.shades].sort((a, b) => a.id.localeCompare(b.id));
+      for (const s of sortedShades) {
+        if (s.state !== "chase" && s.state !== "wander") continue;
 
-      const distXZ = Math.hypot(this.player.pos[0] - s.pos[0], this.player.pos[2] - s.pos[2]);
-      const distY = Math.abs(this.player.pos[1] - s.pos[1]);
+        const distXZ = Math.hypot(this.player.pos[0] - s.pos[0], this.player.pos[2] - s.pos[2]);
+        const distY = Math.abs(this.player.pos[1] - s.pos[1]);
 
-      if (distXZ <= this.tuning.shade_hit_radius && distY <= 1.5) {
-        if (this.player.invuln_ticks <= 0) {
-          this.player.flames -= 1;
-          this.player.invuln_ticks = 90; // 1.5s = 90 ticks
+        if (distXZ <= this.tuning.shade_hit_radius && distY <= 1.5) {
+          if (this.player.invuln_ticks <= 0) {
+            this.player.flames -= 1;
+            this.player.invuln_ticks = 90; // 1.5s = 90 ticks
 
-          // Drop floor(carried / 2) motes in ring 1.5 - 2.5m
-          const dropCount = Math.floor(this.player.carried * this.tuning.hit_drop_ratio);
-          this.player.carried -= dropCount;
+            // Drop floor(carried / 2) motes in ring 1.5 - 2.5m
+            const dropCount = Math.floor(this.player.carried * this.tuning.hit_drop_ratio);
+            this.player.carried -= dropCount;
 
-          for (let k = 0; k < dropCount; k++) {
-            const angle = (k * (Math.PI * 2)) / Math.max(1, dropCount);
-            const rDrop = 1.5 + this.rng() * 1.0;
-            this.motes.push({
-              id: `M${this.next_mote_id++}`,
-              pos: [round3(this.player.pos[0] + Math.cos(angle) * rDrop), this.player.pos[1], round3(this.player.pos[2] + Math.sin(angle) * rDrop)],
-              kind: "dropped",
-              ttl_ticks: 480
-            });
-          }
+            for (let k = 0; k < dropCount; k++) {
+              const angle = (k * (Math.PI * 2)) / Math.max(1, dropCount);
+              const rDrop = 1.5 + this.rng() * 1.0;
+              this.motes.push({
+                id: `M${this.next_mote_id++}`,
+                pos: [round3(this.player.pos[0] + Math.cos(angle) * rDrop), this.player.pos[1], round3(this.player.pos[2] + Math.sin(angle) * rDrop)],
+                kind: "dropped",
+                ttl_ticks: 480
+              });
+            }
 
-          // Recoil shade 2m in 60 ticks
-          s.state = "recoil";
-          s.state_ticks_left = 60;
-          const rX = s.pos[0] - this.player.pos[0] || 1;
-          const rZ = s.pos[2] - this.player.pos[2] || 0;
-          const rLen = Math.hypot(rX, rZ) || 1;
-          s.recoil_dir = [rX / rLen, rZ / rLen];
+            // Recoil shade 2m in 60 ticks
+            s.state = "recoil";
+            s.state_ticks_left = 60;
+            const rX = s.pos[0] - this.player.pos[0] || 1;
+            const rZ = s.pos[2] - this.player.pos[2] || 0;
+            const rLen = Math.hypot(rX, rZ) || 1;
+            s.recoil_dir = [rX / rLen, rZ / rLen];
 
-          events.push({
-            type: "event",
-            tick: currentTick,
-            name: "player_hit",
-            data: { by: "shade", flames: this.player.flames, dropped: dropCount }
-          });
-
-          if (this.player.flames <= 0) {
-            this.state = "lost";
             events.push({
               type: "event",
               tick: currentTick,
-              name: "game_over",
-              data: { result: "lost", reason: "no_flames" }
+              name: "player_hit",
+              data: { by: "shade", flames: this.player.flames, dropped: dropCount }
             });
-            break;
+
+            if (this.player.flames <= 0) {
+              this.state = "lost";
+              events.push({
+                type: "event",
+                tick: currentTick,
+                name: "game_over",
+                data: { result: "lost", reason: "no_flames" }
+              });
+              break;
+            }
           }
         }
       }
     }
 
     // 9. Spawn schedule
-    // Motes spawn at 240, 480, ... if total < 30
-    if (currentTick % 240 === 0 && this.motes.length < 30) {
-      const occupied = new Set(this.motes.map((m) => `${round3(m.pos[0])},${round3(m.pos[2])}`));
-      const emptyPoint = this.mote_spawn_points.find((p) => !occupied.has(`${round3(p[0])},${round3(p[2])}`));
-      if (emptyPoint) {
-        this.motes.push({
-          id: `M${this.next_mote_id++}`,
-          pos: [...emptyPoint],
-          kind: "random",
-          ttl_ticks: -1
-        });
-      }
-    }
-
-    // Shade spawn schedule
-    const maxShades = { 1: 6, 2: 8, 3: 10 }[this.night] || 6;
-    const spawnInterval = { 1: 480, 2: 420, 3: 360 }[this.night] || 480;
-
-    let shouldSpawnShade = false;
-    let spawnCount = 0;
-    if (currentTick === 300) {
-      shouldSpawnShade = true;
-      spawnCount = 2;
-    } else if (currentTick > 300 && (currentTick - 300) % spawnInterval === 0) {
-      shouldSpawnShade = true;
-      spawnCount = 1;
-    }
-
-    if (shouldSpawnShade && this.shades.length < maxShades) {
-      for (let k = 0; k < spawnCount && this.shades.length < maxShades; k++) {
-        // Find point with dist to player >= 15m
-        const pt = this.shade_spawn_points.find((p) => Math.hypot(p[0] - this.player.pos[0], p[2] - this.player.pos[2]) >= 15.0);
-        if (pt) {
-          const shadeId = `S${this.next_shade_id++}`;
-          this.shades.push({
-            id: shadeId,
-            pos: [...pt],
-            state: "spawning",
-            state_ticks_left: 60,
-            recoil_dir: [0, 0],
-            push_dir: [0, 0],
-            push_ticks: 0
+    if (!this.is_benchmark) {
+      // Motes spawn at 240, 480, ... if total < 30
+      if (currentTick % 240 === 0 && this.motes.length < 30) {
+        const occupied = new Set(this.motes.map((m) => `${round3(m.pos[0])},${round3(m.pos[2])}`));
+        const emptyPoint = this.mote_spawn_points.find((p) => !occupied.has(`${round3(p[0])},${round3(p[2])}`));
+        if (emptyPoint) {
+          this.motes.push({
+            id: `M${this.next_mote_id++}`,
+            pos: [...emptyPoint],
+            kind: "random",
+            ttl_ticks: -1
           });
-          events.push({ type: "event", tick: currentTick, name: "shade_spawned", data: { id: shadeId } });
         }
       }
-    }
 
-    // Drifter spawn schedule at tick 1200, 2400 on Night 2 and 3
-    if ((this.night === 2 || this.night === 3) && currentTick % 1200 === 0 && this.drifters.length < 2) {
-      const dId = `D${this.next_drifter_id++}`;
-      const angle = this.rng() * Math.PI * 2;
-      const r = 25 + this.rng() * 10;
-      this.drifters.push({
-        id: dId,
-        pos: [round3(Math.cos(angle) * r), 2, round3(Math.sin(angle) * r)],
-        state: "idle",
-        stolen: 0,
-        flee_ticks: 0,
-        dir: [Math.cos(angle), Math.sin(angle)]
-      });
+      // Shade spawn schedule
+      const maxShades = { 1: 6, 2: 8, 3: 10 }[this.night] || 6;
+      const spawnInterval = { 1: 480, 2: 420, 3: 360 }[this.night] || 480;
+
+      let shouldSpawnShade = false;
+      let spawnCount = 0;
+      if (currentTick === 300) {
+        shouldSpawnShade = true;
+        spawnCount = 2;
+      } else if (currentTick > 300 && (currentTick - 300) % spawnInterval === 0) {
+        shouldSpawnShade = true;
+        spawnCount = 1;
+      }
+
+      if (shouldSpawnShade && this.shades.length < maxShades) {
+        for (let k = 0; k < spawnCount && this.shades.length < maxShades; k++) {
+          // Find point with dist to player >= 15m
+          const pt = this.shade_spawn_points.find((p) => Math.hypot(p[0] - this.player.pos[0], p[2] - this.player.pos[2]) >= 15.0);
+          if (pt) {
+            const shadeId = `S${this.next_shade_id++}`;
+            this.shades.push({
+              id: shadeId,
+              pos: [...pt],
+              state: "spawning",
+              state_ticks_left: 60,
+              recoil_dir: [0, 0],
+              push_dir: [0, 0],
+              push_ticks: 0
+            });
+            events.push({ type: "event", tick: currentTick, name: "shade_spawned", data: { id: shadeId } });
+          }
+        }
+      }
+
+      // Drifter spawn schedule at tick 1200, 2400 on Night 2 and 3
+      if ((this.night === 2 || this.night === 3) && currentTick % 1200 === 0 && this.drifters.length < 2) {
+        const dId = `D${this.next_drifter_id++}`;
+        const angle = this.rng() * Math.PI * 2;
+        const r = 25 + this.rng() * 10;
+        this.drifters.push({
+          id: dId,
+          pos: [round3(Math.cos(angle) * r), 2, round3(Math.sin(angle) * r)],
+          state: "idle",
+          stolen: 0,
+          flee_ticks: 0,
+          dir: [Math.cos(angle), Math.sin(angle)]
+        });
+      }
     }
 
     // 10. Update time left & win/loss
-    this.time_left_s = Math.max(0, this.initial_time_left_s - this.sim_tick / 60);
+    if (!this.is_benchmark) {
+      this.time_left_s = Math.max(0, this.initial_time_left_s - this.sim_tick / 60);
 
-    if (this.player.flames <= 0) {
-      if (this.state === "playing") {
-        this.state = "lost";
-        events.push({
-          type: "event",
-          tick: currentTick,
-          name: "game_over",
-          data: { result: "lost", reason: "no_flames" }
-        });
-      }
-    } else if (this.state === "playing" && this.time_left_s <= 0) {
-      const litCount = this.lanterns.filter((l) => l.lit).length;
-      const winThreshold = Math.ceil(this.tuning.win_ratio * this.lanterns.length);
-      if (litCount >= winThreshold) {
-        this.state = "won";
-        // Bình minh (chỉ khi thắng): mỗi đèn đang sáng +50 + floor(fuel)
-        for (const l of this.lanterns) {
-          if (l.lit) {
-            this.score += this.tuning.score.per_lit_lantern + Math.floor(l.fuel_units / 60);
-          }
+      if (this.player.flames <= 0) {
+        if (this.state === "playing") {
+          this.state = "lost";
+          events.push({
+            type: "event",
+            tick: currentTick,
+            name: "game_over",
+            data: { result: "lost", reason: "no_flames" }
+          });
         }
-        // Bình minh (chỉ khi thắng): mỗi Ngọn Lửa còn lại +50
-        this.score += this.player.flames * this.tuning.score.per_flame_left;
+      } else if (this.state === "playing" && this.time_left_s <= 0) {
+        const litCount = this.lanterns.filter((l) => l.lit).length;
+        const winThreshold = Math.ceil(this.tuning.win_ratio * this.lanterns.length);
+        if (litCount >= winThreshold) {
+          this.state = "won";
+          // Bình minh (chỉ khi thắng): mỗi đèn đang sáng +50 + floor(fuel)
+          for (const l of this.lanterns) {
+            if (l.lit) {
+              this.score += this.tuning.score.per_lit_lantern + Math.floor(l.fuel_units / 60);
+            }
+          }
+          // Bình minh (chỉ khi thắng): mỗi Ngọn Lửa còn lại +50
+          this.score += this.player.flames * this.tuning.score.per_flame_left;
 
-        events.push({
-          type: "event",
-          tick: currentTick,
-          name: "game_over",
-          data: { result: "won", reason: "dawn_survived" }
-        });
-      } else {
-        this.state = "lost";
-        events.push({
-          type: "event",
-          tick: currentTick,
-          name: "game_over",
-          data: { result: "lost", reason: "dawn" }
-        });
+          events.push({
+            type: "event",
+            tick: currentTick,
+            name: "game_over",
+            data: { result: "won", reason: "dawn_survived" }
+          });
+        } else {
+          this.state = "lost";
+          events.push({
+            type: "event",
+            tick: currentTick,
+            name: "game_over",
+            data: { result: "lost", reason: "dawn" }
+          });
+        }
       }
     }
 

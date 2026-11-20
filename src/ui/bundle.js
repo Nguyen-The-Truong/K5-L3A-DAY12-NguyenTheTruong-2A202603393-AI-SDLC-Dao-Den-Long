@@ -28731,24 +28731,26 @@ void main() {
       for (const l of this.lanterns) {
         if (l.safe_push_ticks > 0) l.safe_push_ticks -= 1;
       }
-      for (const l of this.lanterns) {
-        if (l.lit) {
-          l.fuel_units -= 1;
-          for (const s of this.shades) {
-            if (s.state === "drain" && s.drain_target_id === l.id) {
-              l.fuel_units -= 5;
-              s.drain_ticks = (s.drain_ticks || 0) + 1;
-              if (s.drain_ticks % 60 === 0) {
-                events.push({
-                  type: "event",
-                  tick: currentTick,
-                  name: "fuel_drain",
-                  data: {
-                    lantern_id: l.id,
-                    shade_id: s.id,
-                    fuel: round1(Math.max(0, l.fuel_units / 60))
-                  }
-                });
+      if (!this.is_benchmark) {
+        for (const l of this.lanterns) {
+          if (l.lit) {
+            l.fuel_units -= 1;
+            for (const s of this.shades) {
+              if (s.state === "drain" && s.drain_target_id === l.id) {
+                l.fuel_units -= 5;
+                s.drain_ticks = (s.drain_ticks || 0) + 1;
+                if (s.drain_ticks % 60 === 0) {
+                  events.push({
+                    type: "event",
+                    tick: currentTick,
+                    name: "fuel_drain",
+                    data: {
+                      lantern_id: l.id,
+                      shade_id: s.id,
+                      fuel: round1(Math.max(0, l.fuel_units / 60))
+                    }
+                  });
+                }
               }
             }
           }
@@ -28900,20 +28902,22 @@ void main() {
           this.player.invuln_ticks = 90;
         }
       }
-      for (let i = this.motes.length - 1; i >= 0; i--) {
-        const m = this.motes[i];
-        if (m.ttl_ticks === 480) continue;
-        const distXZ = Math.hypot(this.player.pos[0] - m.pos[0], this.player.pos[2] - m.pos[2]);
-        const distY = Math.abs(this.player.pos[1] - m.pos[1]);
-        if (distXZ <= this.tuning.pickup_radius && distY <= 1.5 && this.player.carried < this.player.capacity) {
-          this.player.carried += 1;
-          this.motes.splice(i, 1);
-          events.push({
-            type: "event",
-            tick: currentTick,
-            name: "mote_picked",
-            data: { carried: this.player.carried }
-          });
+      if (!this.is_benchmark) {
+        for (let i = this.motes.length - 1; i >= 0; i--) {
+          const m = this.motes[i];
+          if (m.ttl_ticks === 480) continue;
+          const distXZ = Math.hypot(this.player.pos[0] - m.pos[0], this.player.pos[2] - m.pos[2]);
+          const distY = Math.abs(this.player.pos[1] - m.pos[1]);
+          if (distXZ <= this.tuning.pickup_radius && distY <= 1.5 && this.player.carried < this.player.capacity) {
+            this.player.carried += 1;
+            this.motes.splice(i, 1);
+            events.push({
+              type: "event",
+              tick: currentTick,
+              name: "mote_picked",
+              data: { carried: this.player.carried }
+            });
+          }
         }
       }
       for (const c of this.charms) {
@@ -29252,142 +29256,148 @@ void main() {
           }
         }
       }
-      const sortedShades = [...this.shades].sort((a, b) => a.id.localeCompare(b.id));
-      for (const s of sortedShades) {
-        if (s.state !== "chase" && s.state !== "wander") continue;
-        const distXZ = Math.hypot(this.player.pos[0] - s.pos[0], this.player.pos[2] - s.pos[2]);
-        const distY = Math.abs(this.player.pos[1] - s.pos[1]);
-        if (distXZ <= this.tuning.shade_hit_radius && distY <= 1.5) {
-          if (this.player.invuln_ticks <= 0) {
-            this.player.flames -= 1;
-            this.player.invuln_ticks = 90;
-            const dropCount = Math.floor(this.player.carried * this.tuning.hit_drop_ratio);
-            this.player.carried -= dropCount;
-            for (let k = 0; k < dropCount; k++) {
-              const angle = k * (Math.PI * 2) / Math.max(1, dropCount);
-              const rDrop = 1.5 + this.rng() * 1;
-              this.motes.push({
-                id: `M${this.next_mote_id++}`,
-                pos: [round3(this.player.pos[0] + Math.cos(angle) * rDrop), this.player.pos[1], round3(this.player.pos[2] + Math.sin(angle) * rDrop)],
-                kind: "dropped",
-                ttl_ticks: 480
-              });
-            }
-            s.state = "recoil";
-            s.state_ticks_left = 60;
-            const rX = s.pos[0] - this.player.pos[0] || 1;
-            const rZ = s.pos[2] - this.player.pos[2] || 0;
-            const rLen = Math.hypot(rX, rZ) || 1;
-            s.recoil_dir = [rX / rLen, rZ / rLen];
-            events.push({
-              type: "event",
-              tick: currentTick,
-              name: "player_hit",
-              data: { by: "shade", flames: this.player.flames, dropped: dropCount }
-            });
-            if (this.player.flames <= 0) {
-              this.state = "lost";
+      if (!this.is_benchmark) {
+        const sortedShades = [...this.shades].sort((a, b) => a.id.localeCompare(b.id));
+        for (const s of sortedShades) {
+          if (s.state !== "chase" && s.state !== "wander") continue;
+          const distXZ = Math.hypot(this.player.pos[0] - s.pos[0], this.player.pos[2] - s.pos[2]);
+          const distY = Math.abs(this.player.pos[1] - s.pos[1]);
+          if (distXZ <= this.tuning.shade_hit_radius && distY <= 1.5) {
+            if (this.player.invuln_ticks <= 0) {
+              this.player.flames -= 1;
+              this.player.invuln_ticks = 90;
+              const dropCount = Math.floor(this.player.carried * this.tuning.hit_drop_ratio);
+              this.player.carried -= dropCount;
+              for (let k = 0; k < dropCount; k++) {
+                const angle = k * (Math.PI * 2) / Math.max(1, dropCount);
+                const rDrop = 1.5 + this.rng() * 1;
+                this.motes.push({
+                  id: `M${this.next_mote_id++}`,
+                  pos: [round3(this.player.pos[0] + Math.cos(angle) * rDrop), this.player.pos[1], round3(this.player.pos[2] + Math.sin(angle) * rDrop)],
+                  kind: "dropped",
+                  ttl_ticks: 480
+                });
+              }
+              s.state = "recoil";
+              s.state_ticks_left = 60;
+              const rX = s.pos[0] - this.player.pos[0] || 1;
+              const rZ = s.pos[2] - this.player.pos[2] || 0;
+              const rLen = Math.hypot(rX, rZ) || 1;
+              s.recoil_dir = [rX / rLen, rZ / rLen];
               events.push({
                 type: "event",
                 tick: currentTick,
-                name: "game_over",
-                data: { result: "lost", reason: "no_flames" }
+                name: "player_hit",
+                data: { by: "shade", flames: this.player.flames, dropped: dropCount }
               });
-              break;
+              if (this.player.flames <= 0) {
+                this.state = "lost";
+                events.push({
+                  type: "event",
+                  tick: currentTick,
+                  name: "game_over",
+                  data: { result: "lost", reason: "no_flames" }
+                });
+                break;
+              }
             }
           }
         }
       }
-      if (currentTick % 240 === 0 && this.motes.length < 30) {
-        const occupied = new Set(this.motes.map((m) => `${round3(m.pos[0])},${round3(m.pos[2])}`));
-        const emptyPoint = this.mote_spawn_points.find((p) => !occupied.has(`${round3(p[0])},${round3(p[2])}`));
-        if (emptyPoint) {
-          this.motes.push({
-            id: `M${this.next_mote_id++}`,
-            pos: [...emptyPoint],
-            kind: "random",
-            ttl_ticks: -1
-          });
-        }
-      }
-      const maxShades = { 1: 6, 2: 8, 3: 10 }[this.night] || 6;
-      const spawnInterval = { 1: 480, 2: 420, 3: 360 }[this.night] || 480;
-      let shouldSpawnShade = false;
-      let spawnCount = 0;
-      if (currentTick === 300) {
-        shouldSpawnShade = true;
-        spawnCount = 2;
-      } else if (currentTick > 300 && (currentTick - 300) % spawnInterval === 0) {
-        shouldSpawnShade = true;
-        spawnCount = 1;
-      }
-      if (shouldSpawnShade && this.shades.length < maxShades) {
-        for (let k = 0; k < spawnCount && this.shades.length < maxShades; k++) {
-          const pt = this.shade_spawn_points.find((p) => Math.hypot(p[0] - this.player.pos[0], p[2] - this.player.pos[2]) >= 15);
-          if (pt) {
-            const shadeId = `S${this.next_shade_id++}`;
-            this.shades.push({
-              id: shadeId,
-              pos: [...pt],
-              state: "spawning",
-              state_ticks_left: 60,
-              recoil_dir: [0, 0],
-              push_dir: [0, 0],
-              push_ticks: 0
+      if (!this.is_benchmark) {
+        if (currentTick % 240 === 0 && this.motes.length < 30) {
+          const occupied = new Set(this.motes.map((m) => `${round3(m.pos[0])},${round3(m.pos[2])}`));
+          const emptyPoint = this.mote_spawn_points.find((p) => !occupied.has(`${round3(p[0])},${round3(p[2])}`));
+          if (emptyPoint) {
+            this.motes.push({
+              id: `M${this.next_mote_id++}`,
+              pos: [...emptyPoint],
+              kind: "random",
+              ttl_ticks: -1
             });
-            events.push({ type: "event", tick: currentTick, name: "shade_spawned", data: { id: shadeId } });
           }
         }
-      }
-      if ((this.night === 2 || this.night === 3) && currentTick % 1200 === 0 && this.drifters.length < 2) {
-        const dId = `D${this.next_drifter_id++}`;
-        const angle = this.rng() * Math.PI * 2;
-        const r = 25 + this.rng() * 10;
-        this.drifters.push({
-          id: dId,
-          pos: [round3(Math.cos(angle) * r), 2, round3(Math.sin(angle) * r)],
-          state: "idle",
-          stolen: 0,
-          flee_ticks: 0,
-          dir: [Math.cos(angle), Math.sin(angle)]
-        });
-      }
-      this.time_left_s = Math.max(0, this.initial_time_left_s - this.sim_tick / 60);
-      if (this.player.flames <= 0) {
-        if (this.state === "playing") {
-          this.state = "lost";
-          events.push({
-            type: "event",
-            tick: currentTick,
-            name: "game_over",
-            data: { result: "lost", reason: "no_flames" }
-          });
+        const maxShades = { 1: 6, 2: 8, 3: 10 }[this.night] || 6;
+        const spawnInterval = { 1: 480, 2: 420, 3: 360 }[this.night] || 480;
+        let shouldSpawnShade = false;
+        let spawnCount = 0;
+        if (currentTick === 300) {
+          shouldSpawnShade = true;
+          spawnCount = 2;
+        } else if (currentTick > 300 && (currentTick - 300) % spawnInterval === 0) {
+          shouldSpawnShade = true;
+          spawnCount = 1;
         }
-      } else if (this.state === "playing" && this.time_left_s <= 0) {
-        const litCount = this.lanterns.filter((l) => l.lit).length;
-        const winThreshold = Math.ceil(this.tuning.win_ratio * this.lanterns.length);
-        if (litCount >= winThreshold) {
-          this.state = "won";
-          for (const l of this.lanterns) {
-            if (l.lit) {
-              this.score += this.tuning.score.per_lit_lantern + Math.floor(l.fuel_units / 60);
+        if (shouldSpawnShade && this.shades.length < maxShades) {
+          for (let k = 0; k < spawnCount && this.shades.length < maxShades; k++) {
+            const pt = this.shade_spawn_points.find((p) => Math.hypot(p[0] - this.player.pos[0], p[2] - this.player.pos[2]) >= 15);
+            if (pt) {
+              const shadeId = `S${this.next_shade_id++}`;
+              this.shades.push({
+                id: shadeId,
+                pos: [...pt],
+                state: "spawning",
+                state_ticks_left: 60,
+                recoil_dir: [0, 0],
+                push_dir: [0, 0],
+                push_ticks: 0
+              });
+              events.push({ type: "event", tick: currentTick, name: "shade_spawned", data: { id: shadeId } });
             }
           }
-          this.score += this.player.flames * this.tuning.score.per_flame_left;
-          events.push({
-            type: "event",
-            tick: currentTick,
-            name: "game_over",
-            data: { result: "won", reason: "dawn_survived" }
+        }
+        if ((this.night === 2 || this.night === 3) && currentTick % 1200 === 0 && this.drifters.length < 2) {
+          const dId = `D${this.next_drifter_id++}`;
+          const angle = this.rng() * Math.PI * 2;
+          const r = 25 + this.rng() * 10;
+          this.drifters.push({
+            id: dId,
+            pos: [round3(Math.cos(angle) * r), 2, round3(Math.sin(angle) * r)],
+            state: "idle",
+            stolen: 0,
+            flee_ticks: 0,
+            dir: [Math.cos(angle), Math.sin(angle)]
           });
-        } else {
-          this.state = "lost";
-          events.push({
-            type: "event",
-            tick: currentTick,
-            name: "game_over",
-            data: { result: "lost", reason: "dawn" }
-          });
+        }
+      }
+      if (!this.is_benchmark) {
+        this.time_left_s = Math.max(0, this.initial_time_left_s - this.sim_tick / 60);
+        if (this.player.flames <= 0) {
+          if (this.state === "playing") {
+            this.state = "lost";
+            events.push({
+              type: "event",
+              tick: currentTick,
+              name: "game_over",
+              data: { result: "lost", reason: "no_flames" }
+            });
+          }
+        } else if (this.state === "playing" && this.time_left_s <= 0) {
+          const litCount = this.lanterns.filter((l) => l.lit).length;
+          const winThreshold = Math.ceil(this.tuning.win_ratio * this.lanterns.length);
+          if (litCount >= winThreshold) {
+            this.state = "won";
+            for (const l of this.lanterns) {
+              if (l.lit) {
+                this.score += this.tuning.score.per_lit_lantern + Math.floor(l.fuel_units / 60);
+              }
+            }
+            this.score += this.player.flames * this.tuning.score.per_flame_left;
+            events.push({
+              type: "event",
+              tick: currentTick,
+              name: "game_over",
+              data: { result: "won", reason: "dawn_survived" }
+            });
+          } else {
+            this.state = "lost";
+            events.push({
+              type: "event",
+              tick: currentTick,
+              name: "game_over",
+              data: { result: "lost", reason: "dawn" }
+            });
+          }
         }
       }
       this.prev_input = input;
@@ -29461,6 +29471,46 @@ void main() {
       };
     }
   };
+
+  // src/core/bench_setup.js
+  function setupBenchmarkScene(engine2, seed = 42) {
+    engine2.is_benchmark = true;
+    const prng = createPRNG(seed);
+    engine2.shades = [];
+    for (let i = 1; i <= 200; i++) {
+      const r = Math.sqrt(prng()) * 38;
+      const angle = prng() * Math.PI * 2;
+      const wanderAngle = prng() * Math.PI * 2;
+      const wanderR = Math.sqrt(prng()) * 35;
+      engine2.shades.push({
+        id: `S${i}`,
+        pos: [round3(Math.cos(angle) * r), 0, round3(Math.sin(angle) * r)],
+        state: "wander",
+        target: [round3(Math.cos(wanderAngle) * wanderR), 0, round3(Math.sin(wanderAngle) * wanderR)],
+        wander_ticks: Math.floor(prng() * 120),
+        state_ticks_left: 0,
+        recoil_dir: [0, 0],
+        push_dir: [0, 0],
+        push_ticks: 0
+      });
+    }
+    engine2.motes = [];
+    for (let i = 1; i <= 100; i++) {
+      const r = Math.sqrt(prng()) * 38;
+      const angle = prng() * Math.PI * 2;
+      engine2.motes.push({
+        id: `M${i}`,
+        pos: [round3(Math.cos(angle) * r), 0, round3(Math.sin(angle) * r)],
+        kind: "random",
+        ttl_ticks: 0
+      });
+    }
+    for (let i = 0; i < Math.min(3, engine2.lanterns.length); i++) {
+      engine2.lanterns[i].lit = true;
+      engine2.lanterns[i].fuel = 100;
+      engine2.lanterns[i].fuel_units = 6e3;
+    }
+  }
 
   // src/ui/game.js
   var SoundSynth = class {
@@ -29913,6 +29963,62 @@ void main() {
     pulseRingMesh.position.set(pos[0], pos[1] + 0.1, pos[2]);
     pulseAnimProgress = 0;
   }
+  var DEFAULT_KEY_BINDINGS = {
+    up: "w",
+    down: "s",
+    left: "a",
+    right: "d",
+    jump: " ",
+    dash: "shift",
+    interact: "e",
+    pulse: "q",
+    pause: "escape"
+  };
+  var keyBindings = { ...DEFAULT_KEY_BINDINGS };
+  try {
+    const saved = localStorage.getItem("dao_den_long_keybinds");
+    if (saved) keyBindings = { ...DEFAULT_KEY_BINDINGS, ...JSON.parse(saved) };
+  } catch (e) {
+  }
+  function saveKeyBindings() {
+    localStorage.setItem("dao_den_long_keybinds", JSON.stringify(keyBindings));
+    updateKeyBindLabels();
+  }
+  function getDisplayKey(k) {
+    if (k === " ") return "Space";
+    if (k === "escape") return "Esc";
+    if (k === "shift") return "Shift";
+    return k.toUpperCase();
+  }
+  function updateKeyBindLabels() {
+    for (const [action, key] of Object.entries(keyBindings)) {
+      const btn = document.getElementById(`bind-${action}`);
+      if (btn) btn.textContent = getDisplayKey(key);
+    }
+    const lblDash = document.getElementById("lbl-dash");
+    if (lblDash) lblDash.textContent = `${getDisplayKey(keyBindings.dash)} \xB7 L\u01B0\u1EDBt`;
+    const lblPulse = document.getElementById("lbl-pulse");
+    if (lblPulse) lblPulse.textContent = `${getDisplayKey(keyBindings.pulse)} \xB7 T\u1ECFa S\xE1ng`;
+    const kw = document.getElementById("k-w");
+    if (kw) kw.textContent = getDisplayKey(keyBindings.up);
+    const ka = document.getElementById("k-a");
+    if (ka) ka.textContent = getDisplayKey(keyBindings.left);
+    const ks = document.getElementById("k-s");
+    if (ks) ks.textContent = getDisplayKey(keyBindings.down);
+    const kd = document.getElementById("k-d");
+    if (kd) kd.textContent = getDisplayKey(keyBindings.right);
+    const kspace = document.getElementById("k-space");
+    if (kspace) kspace.textContent = getDisplayKey(keyBindings.jump);
+    const kshift = document.getElementById("k-shift");
+    if (kshift) kshift.textContent = getDisplayKey(keyBindings.dash);
+    const ke = document.getElementById("k-e");
+    if (ke) ke.textContent = getDisplayKey(keyBindings.interact);
+    const kq = document.getElementById("k-q");
+    if (kq) kq.textContent = getDisplayKey(keyBindings.pulse);
+    const kesc = document.getElementById("k-esc");
+    if (kesc) kesc.textContent = getDisplayKey(keyBindings.pause);
+  }
+  updateKeyBindLabels();
   var keys = {
     w: false,
     a: false,
@@ -29924,36 +30030,168 @@ void main() {
     shift: false,
     esc: false
   };
+  var rebindingAction = null;
+  var conflictMsg = document.getElementById("key-conflict-msg");
+  document.querySelectorAll(".btn-key-bind").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const action = btn.getAttribute("data-action");
+      if (rebindingAction === action) {
+        rebindingAction = null;
+        btn.classList.remove("listening");
+        if (conflictMsg) conflictMsg.style.display = "none";
+        updateKeyBindLabels();
+        return;
+      }
+      document.querySelectorAll(".btn-key-bind").forEach((b) => b.classList.remove("listening"));
+      rebindingAction = action;
+      btn.classList.add("listening");
+      btn.textContent = "B\u1EA5m ph\xEDm...";
+      if (conflictMsg) conflictMsg.style.display = "none";
+    });
+  });
+  var btnResetKeys = document.getElementById("btn-reset-keys");
+  if (btnResetKeys) {
+    btnResetKeys.addEventListener("click", () => {
+      keyBindings = { ...DEFAULT_KEY_BINDINGS };
+      rebindingAction = null;
+      document.querySelectorAll(".btn-key-bind").forEach((b) => b.classList.remove("listening"));
+      if (conflictMsg) conflictMsg.style.display = "none";
+      saveKeyBindings();
+    });
+  }
+  var subtitleBox = document.getElementById("subtitle-box");
+  var subtitleTimer = null;
+  function showSubtitle(text, duration = 2500) {
+    if (!subtitleBox) return;
+    subtitleBox.textContent = text;
+    subtitleBox.style.display = "block";
+    if (subtitleTimer) clearTimeout(subtitleTimer);
+    subtitleTimer = setTimeout(() => {
+      subtitleBox.style.display = "none";
+    }, duration);
+  }
+  var threatPointer = document.getElementById("threat-pointer");
+  function updateThreatPointer() {
+    if (!threatPointer || !engine) return;
+    let closestChaser = null;
+    let minD = Infinity;
+    for (const s of engine.shades) {
+      if (s.state === "chase") {
+        const d = Math.hypot(s.pos[0] - engine.player.pos[0], s.pos[2] - engine.player.pos[2]);
+        if (d < minD) {
+          minD = d;
+          closestChaser = s;
+        }
+      }
+    }
+    if (closestChaser && minD <= 24) {
+      const dx = closestChaser.pos[0] - engine.player.pos[0];
+      const dz = closestChaser.pos[2] - engine.player.pos[2];
+      const angle = Math.atan2(dx, dz);
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+      const r = Math.min(screenW, screenH) * 0.4;
+      const cx = screenW / 2 + Math.sin(angle) * r;
+      const cy = screenH / 2 - Math.cos(angle) * r;
+      threatPointer.style.display = "flex";
+      threatPointer.style.left = `${Math.max(20, Math.min(screenW - 60, cx))}px`;
+      threatPointer.style.top = `${Math.max(60, Math.min(screenH - 60, cy))}px`;
+      threatPointer.style.transform = `rotate(${angle + Math.PI}rad)`;
+    } else {
+      threatPointer.style.display = "none";
+    }
+  }
+  var isLargeFont = localStorage.getItem("dao_den_long_large_font") === "true";
+  var reduceMotion = localStorage.getItem("dao_den_long_reduce_motion") === "true";
+  var chkLargeFont = document.getElementById("chk-large-font");
+  if (chkLargeFont) {
+    chkLargeFont.checked = isLargeFont;
+    document.body.classList.toggle("large-font", isLargeFont);
+    chkLargeFont.addEventListener("change", () => {
+      isLargeFont = chkLargeFont.checked;
+      localStorage.setItem("dao_den_long_large_font", isLargeFont ? "true" : "false");
+      document.body.classList.toggle("large-font", isLargeFont);
+    });
+  }
+  var chkReduceMotion = document.getElementById("chk-reduce-motion");
+  if (chkReduceMotion) {
+    chkReduceMotion.checked = reduceMotion;
+    chkReduceMotion.addEventListener("change", () => {
+      reduceMotion = chkReduceMotion.checked;
+      localStorage.setItem("dao_den_long_reduce_motion", reduceMotion ? "true" : "false");
+    });
+  }
+  var chkColorblindOpt = document.getElementById("chk-colorblind-opt");
+  if (chkColorblindOpt) {
+    chkColorblindOpt.checked = isColorblind;
+    chkColorblindOpt.addEventListener("change", () => {
+      isColorblind = chkColorblindOpt.checked;
+      localStorage.setItem("colorblind_mode", isColorblind ? "true" : "false");
+      applyColorblindMode();
+    });
+  }
   window.addEventListener("keydown", (e) => {
     sounds.ensureContext();
     const k = e.key.toLowerCase();
-    if (k === "w" || k === "arrowup") keys.w = true;
-    if (k === "s" || k === "arrowdown") keys.s = true;
-    if (k === "a" || k === "arrowleft") keys.a = true;
-    if (k === "d" || k === "arrowright") keys.d = true;
-    if (k === " ") keys.space = true;
-    if (k === "e") keys.e = true;
-    if (k === "q" || k === "f") keys.q = true;
-    if (k === "shift") keys.shift = true;
-    if (k === "escape" || k === "p") keys.esc = true;
+    if (rebindingAction) {
+      e.preventDefault();
+      let duplicateAction = null;
+      for (const [act, key] of Object.entries(keyBindings)) {
+        if (act !== rebindingAction && key === k) {
+          duplicateAction = act;
+          break;
+        }
+      }
+      if (duplicateAction) {
+        if (conflictMsg) {
+          conflictMsg.style.display = "block";
+          conflictMsg.textContent = `\u26A0 Ph\xEDm "${getDisplayKey(k)}" \u0111\xE3 \u0111\u01B0\u1EE3c g\xE1n cho h\xE0nh \u0111\u1ED9ng kh\xE1c!`;
+        }
+        return;
+      }
+      if (conflictMsg) conflictMsg.style.display = "none";
+      keyBindings[rebindingAction] = k;
+      rebindingAction = null;
+      document.querySelectorAll(".btn-key-bind").forEach((b) => b.classList.remove("listening"));
+      saveKeyBindings();
+      return;
+    }
+    if (k === keyBindings.up) keys.w = true;
+    if (k === keyBindings.down) keys.s = true;
+    if (k === keyBindings.left) keys.a = true;
+    if (k === keyBindings.right) keys.d = true;
+    if (k === keyBindings.jump) keys.space = true;
+    if (k === keyBindings.dash) keys.shift = true;
+    if (k === keyBindings.interact) keys.e = true;
+    if (k === keyBindings.pulse) keys.q = true;
+    if (k === keyBindings.pause) keys.esc = true;
   });
   window.addEventListener("keyup", (e) => {
     const k = e.key.toLowerCase();
-    if (k === "w" || k === "arrowup") keys.w = false;
-    if (k === "s" || k === "arrowdown") keys.s = false;
-    if (k === "a" || k === "arrowleft") keys.a = false;
-    if (k === "d" || k === "arrowright") keys.d = false;
-    if (k === " ") keys.space = false;
-    if (k === "e") keys.e = false;
-    if (k === "q" || k === "f") keys.q = false;
-    if (k === "shift") keys.shift = false;
-    if (k === "escape" || k === "p") keys.esc = false;
+    if (k === keyBindings.up) keys.w = false;
+    if (k === keyBindings.down) keys.s = false;
+    if (k === keyBindings.left) keys.a = false;
+    if (k === keyBindings.right) keys.d = false;
+    if (k === keyBindings.jump) keys.space = false;
+    if (k === keyBindings.dash) keys.shift = false;
+    if (k === keyBindings.interact) keys.e = false;
+    if (k === keyBindings.pulse) keys.q = false;
+    if (k === keyBindings.pause) keys.esc = false;
   });
   var currentNight = 1;
   var engine = null;
+  var isWebBench = new URLSearchParams(window.location.search).get("bench") === "true";
+  var benchStartTime = performance.now();
+  var alerted10s = false;
+  var alertedWind = false;
+  var alertedLowFuel = /* @__PURE__ */ new Set();
   function loadNight(n) {
     currentNight = n;
     engine = new GameEngine({ seed: Date.now() % 1e5, night: n });
+    if (isWebBench) {
+      setupBenchmarkScene(engine, 42);
+    }
     buildWorldMeshes(n);
     clearAllLanterns();
     for (const l of engine.lanterns) {
@@ -29968,6 +30206,117 @@ void main() {
   document.getElementById("btn-night-1").addEventListener("click", () => loadNight(1));
   document.getElementById("btn-night-2").addEventListener("click", () => loadNight(2));
   document.getElementById("btn-night-3").addEventListener("click", () => loadNight(3));
+  var settingsModal = document.getElementById("settings-modal");
+  var btnOpenSettings = document.getElementById("btn-open-settings");
+  var btnCloseSettings = document.getElementById("btn-close-settings");
+  if (btnOpenSettings) btnOpenSettings.addEventListener("click", () => {
+    settingsModal.style.display = "flex";
+  });
+  if (btnCloseSettings) btnCloseSettings.addEventListener("click", () => {
+    settingsModal.style.display = "none";
+  });
+  var leaderboardModal = document.getElementById("leaderboard-modal");
+  var btnOpenLeaderboard = document.getElementById("btn-open-leaderboard");
+  var btnCloseLeaderboard = document.getElementById("btn-close-leaderboard");
+  var btnViewLbEnd = document.getElementById("btn-view-lb-end");
+  async function fetchLeaderboardEntries() {
+    try {
+      const res = await fetch("/api/leaderboard");
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.entries)) return data.entries;
+      }
+    } catch (e) {
+    }
+    try {
+      const saved = localStorage.getItem("dao_den_long_leaderboard");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+    }
+    return [];
+  }
+  async function renderLeaderboardTable() {
+    const tbody = document.getElementById("lb-table-body");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">\u0110ang t\u1EA3i...</td></tr>';
+    const entries = await fetchLeaderboardEntries();
+    if (entries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">Ch\u01B0a c\xF3 d\u1EEF li\u1EC7u n\xE0o. H\xE3y ch\u01A1i v\xE0 l\u01B0u \u0111i\u1EC3m!</td></tr>';
+      return;
+    }
+    tbody.innerHTML = "";
+    entries.slice(0, 10).forEach((entry, idx) => {
+      const tr = document.createElement("tr");
+      const rankClass = idx === 0 ? "lb-rank-1" : idx === 1 ? "lb-rank-2" : idx === 2 ? "lb-rank-3" : "";
+      const dateStr = entry.achieved_at ? new Date(entry.achieved_at).toLocaleDateString() : "";
+      tr.innerHTML = `
+      <td class="${rankClass}">#${idx + 1}</td>
+      <td style="font-weight: bold;">${entry.name}</td>
+      <td style="color: #F2C14E; font-weight: bold;">${entry.score}</td>
+      <td>\u0110\xEAm ${entry.nights_won || 0}</td>
+      <td style="color: #94a3b8; font-size: 0.85em;">${dateStr}</td>
+    `;
+      tbody.appendChild(tr);
+    });
+  }
+  if (btnOpenLeaderboard) {
+    btnOpenLeaderboard.addEventListener("click", () => {
+      renderLeaderboardTable();
+      leaderboardModal.style.display = "flex";
+    });
+  }
+  if (btnCloseLeaderboard) {
+    btnCloseLeaderboard.addEventListener("click", () => {
+      leaderboardModal.style.display = "none";
+    });
+  }
+  if (btnViewLbEnd) {
+    btnViewLbEnd.addEventListener("click", () => {
+      document.getElementById("end-modal").style.display = "none";
+      renderLeaderboardTable();
+      leaderboardModal.style.display = "flex";
+    });
+  }
+  var btnSubmitScore = document.getElementById("btn-submit-score");
+  var inputPlayerName = document.getElementById("input-player-name");
+  var saveScoreStatus = document.getElementById("save-score-status");
+  if (btnSubmitScore) {
+    btnSubmitScore.addEventListener("click", async () => {
+      const name = (inputPlayerName.value || "").trim();
+      const nameRegex = /^[A-Za-z0-9_\u00C0-\u024F\u1EA0-\u1EF9]+$/;
+      if (name.length < 3 || name.length > 12 || !nameRegex.test(name)) {
+        alert("T\xEAn ph\u1EA3i t\u1EEB 3 \u0111\u1EBFn 12 k\xFD t\u1EF1 [A-Za-z0-9_] ho\u1EB7c ti\u1EBFng Vi\u1EC7t kh\xF4ng ch\u1EE9a k\xFD t\u1EF1 \u0111\u1EB7c bi\u1EC7t!");
+        return;
+      }
+      const payload = {
+        name,
+        score: engine.score,
+        nights_won: engine.state === "won" ? currentNight : Math.max(0, currentNight - 1),
+        seed: engine.seed || 42,
+        achieved_at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      try {
+        const existing = await fetchLeaderboardEntries();
+        existing.push(payload);
+        existing.sort((a, b) => b.score - a.score || new Date(a.achieved_at) - new Date(b.achieved_at));
+        localStorage.setItem("dao_den_long_leaderboard", JSON.stringify(existing.slice(0, 10)));
+      } catch (e) {
+      }
+      try {
+        await fetch("/api/leaderboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+      }
+      if (saveScoreStatus) {
+        saveScoreStatus.style.display = "block";
+        saveScoreStatus.textContent = `\u2713 \u0110\xE3 l\u01B0u k\u1EF7 l\u1EE5c cho "${name}"!`;
+      }
+      btnSubmitScore.disabled = true;
+    });
+  }
   document.getElementById("btn-resume").addEventListener("click", () => {
     document.getElementById("pause-modal").style.display = "none";
     engine.step({ pause: true });
@@ -30019,6 +30368,8 @@ void main() {
         else if (ev.name === "charm_picked") sounds.playCharm();
         else if (ev.name === "lantern_lit") {
           sounds.playLanternLit();
+        } else if (ev.name === "shade_spawned") {
+          showSubtitle("\u26A0 B\xF3ng M\u1EF1c xu\u1EA5t hi\u1EC7n!", 2500);
         } else if (ev.name === "pulse") {
           sounds.playPulse();
           triggerPulseVisual(engine.player.pos);
@@ -30054,10 +30405,17 @@ void main() {
       else if (keys.s && keys.a) targetAngle = 3 * Math.PI / 4;
       playerGroup.rotation.y = MathUtils.lerp(playerGroup.rotation.y, targetAngle, 0.2);
     }
-    camera.position.x = MathUtils.lerp(camera.position.x, playerGroup.position.x, 0.08);
-    camera.position.y = MathUtils.lerp(camera.position.y, playerGroup.position.y + 8.5, 0.08);
-    camera.position.z = MathUtils.lerp(camera.position.z, playerGroup.position.z - 12, 0.08);
-    camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.2, playerGroup.position.z);
+    if (isWebBench) {
+      const t = (performance.now() - benchStartTime) / 1e3;
+      const angle = t / 15 * (Math.PI * 2);
+      camera.position.set(Math.cos(angle) * 30, 15, Math.sin(angle) * 30);
+      camera.lookAt(0, 0, 0);
+    } else {
+      camera.position.x = MathUtils.lerp(camera.position.x, playerGroup.position.x, 0.08);
+      camera.position.y = MathUtils.lerp(camera.position.y, playerGroup.position.y + 8.5, 0.08);
+      camera.position.z = MathUtils.lerp(camera.position.z, playerGroup.position.z - 12, 0.08);
+      camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.2, playerGroup.position.z);
+    }
     updateLanternVisuals();
     updateMoteMeshes(engine.motes);
     updateShadeMeshes(engine.shades);
@@ -30077,7 +30435,28 @@ void main() {
     renderer.render(scene, camera);
   }
   function updateHUD() {
+    updateThreatPointer();
     const totalSeconds = Math.max(0, Math.ceil(engine.time_left_s));
+    if (totalSeconds <= 10 && totalSeconds > 0 && !alerted10s) {
+      showSubtitle("\u23F3 S\u1EAFp b\xECnh minh: 10s!", 2e3);
+      alerted10s = true;
+    }
+    if (totalSeconds > 10) alerted10s = false;
+    if (engine.wind && engine.wind.active && !alertedWind) {
+      showSubtitle("\u{1F32C} Gi\xF3 n\u1ED5i l\xEAn!", 2e3);
+      alertedWind = true;
+    }
+    if (engine.wind && !engine.wind.active) alertedWind = false;
+    for (const l of engine.lanterns) {
+      if (l.lit && l.fuel < 30) {
+        if (!alertedLowFuel.has(l.id)) {
+          showSubtitle(`\u{1F3EE} \u0110\xE8n ${l.id} c\u1EA1n d\u1EA7u!`, 2500);
+          alertedLowFuel.add(l.id);
+        }
+      } else {
+        alertedLowFuel.delete(l.id);
+      }
+    }
     const mm = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
     const ss = String(totalSeconds % 60).padStart(2, "0");
     document.getElementById("hud-time").textContent = `${mm}:${ss}`;
